@@ -46,7 +46,7 @@ public final class Panel {
     }
 
     public static Panel load(GameData game) throws IOException {
-        byte[] raw = Files.readAllBytes(game.include("panelraw"));
+        byte[] raw = game.bytes("panelraw");
         byte[] planes = SbDepacker.isPacked(raw) ? SbDepacker.unpack(raw) : raw;
         if (planes.length < SIZE) {
             byte[] grown = new byte[SIZE];
@@ -54,7 +54,7 @@ public final class Panel {
             planes = grown;
         }
         return new Panel(planes, readCopperPalette(
-                Files.readAllBytes(game.include("panelpal"))));
+                game.bytes("panelpal")));
     }
 
     /**

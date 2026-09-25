@@ -123,15 +123,15 @@ public final class Border {
     }
 
     public static Border load(GameData game) throws IOException {
-        byte[] left = Files.readAllBytes(game.include("newleftbord"));
-        byte[] right = Files.readAllBytes(game.include("newrightbord"));
+        byte[] left = game.bytes("newleftbord");
+        byte[] right = game.bytes("newrightbord");
         byte[] all = new byte[left.length + right.length];
         System.arraycopy(left, 0, all, 0, left.length);
         System.arraycopy(right, 0, all, left.length, right.length);
         return new Border(all,
-                Panel.readCopperPalette(Files.readAllBytes(game.include("borderpal"))),
-                Files.readAllBytes(game.include("healthstrip")),
-                Files.readAllBytes(game.include("ammostrip")));
+                Panel.readCopperPalette(game.bytes("borderpal")),
+                game.bytes("healthstrip"),
+                game.bytes("ammostrip"));
     }
 
     /**

@@ -22,7 +22,7 @@ public final class OptFont {
     }
 
     public static OptFont load(GameData game) throws IOException {
-        return new OptFont(Files.readAllBytes(game.include("OptFont")));
+        return new OptFont(game.bytes("OptFont"));
     }
 
     /** One row of one glyph, as eight bits from the left. */

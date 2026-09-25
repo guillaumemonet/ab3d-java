@@ -31,10 +31,28 @@ public final class DiskCoverCheck {
         "tree", "worm", "bigclaws",
     };
 
-    /** The tables with no rule behind them, read as bytes wherever they are. */
+    /**
+     * Everything else the engine opens, however small.
+     *
+     * Getting this list short was the mistake worth not repeating: counting only
+     * the six big tables said the port needed six files, and it needed eighteen.
+     * The panel borders, the menu font, three palettes, the option screen's rain
+     * and the three modules are each a few kilobytes and every one of them is
+     * read at some point, so they are all named here.
+     */
     private static final String[] BINARIES = {
+        // the tables, worked out from nothing and reproducible from nothing
         "bigsine", "backfile", "brightenfile", "constantfile", "floorpalscaled",
-        "waterfile", "floortile",
+        "waterfile",
+        // the panel, its borders and its gauges
+        "panelraw", "panelpal", "newleftbord", "newrightbord", "borderpal",
+        "healthstrip", "ammostrip",
+        // the title screen, the menu font and the rain behind the options
+        "titlescrnraw", "titlescrnpal", "OptFont", "optcop",
+        // the floor sheet, which disk one does carry
+        "floortile",
+        // and the music
+        "ingame", "welldone", "gameover",
     };
 
     public static void main(String[] args) throws Exception {
@@ -52,19 +70,31 @@ public final class DiskCoverCheck {
         int onDisk = 0;
         long diskBytes = 0;
         long treeBytes = 0;
+        long builtIn = 0;
         List<String> missing = new ArrayList<>();
         List<String> fromTree = new ArrayList<>();
+        List<String> carried = new ArrayList<>();
 
         for (String name : wanted) {
             Path p = game.include(name);
             if (!Files.isRegularFile(p)) {
-                missing.add(name);
+                // not on a disk and not in the tree: the build may still carry it
+                try {
+                    int n = game.bytes(name).length;
+                    carried.add(String.format("%-26s %7d", name, n));
+                    builtIn += n;
+                } catch (java.io.IOException e) {
+                    missing.add(name);
+                }
                 continue;
             }
             long size = Files.size(p);
             if (game.disk() != null && p.startsWith(game.disk())) {
                 onDisk++;
                 diskBytes += size;
+            } else if (GameData.class.getResource("/ab3d/includes/" + name) != null) {
+                carried.add(String.format("%-26s %7d", name, size));
+                builtIn += size;
             } else {
                 fromTree.add(String.format("%-26s %7d", name, size));
                 treeBytes += size;
@@ -73,6 +103,9 @@ public final class DiskCoverCheck {
 
         System.out.printf("%d of %d files come off the floppies (%d KB)%n",
                           onDisk, wanted.size(), diskBytes / 1024);
+        System.out.printf("%n%d this build carries itself (%d KB):%n",
+                          carried.size(), builtIn / 1024);
+        carried.forEach(s -> System.out.println("  " + s));
         System.out.printf("%n%d still come from the source tree (%d KB):%n",
                           fromTree.size(), treeBytes / 1024);
         fromTree.forEach(s -> System.out.println("  " + s));

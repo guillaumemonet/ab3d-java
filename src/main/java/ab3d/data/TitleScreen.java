@@ -74,7 +74,7 @@ public final class TitleScreen {
             raw = grown;
         }
         return new TitleScreen(raw, readPalette(
-                Files.readAllBytes(game.include("titlescrnpal"))));
+                game.bytes("titlescrnpal")));
     }
 
     /** A longword a colour: red in the high word, green and blue below it. */

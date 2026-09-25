@@ -131,6 +131,38 @@ public final class GameData {
         return at;
     }
 
+    /**
+     * The bytes of an {@code includes/} file, wherever this copy keeps them.
+     *
+     * The floppies first, then the source tree, then the six the port carries
+     * itself. Those six are the ones the Amiga executable had {@code INCBIN}'d
+     * rather than put on a disk -- the sine table, the backdrop, the shading and
+     * water tables, the floor palette, the step table -- and no rule reproduces
+     * them, so they are here as bytes. They are small enough to sit in the jar,
+     * which is what lets a packaged copy run with the disks alone.
+     *
+     * @throws IOException when none of the three has it
+     */
+    public byte[] bytes(String name) throws IOException {
+        Path p = include(name);
+        if (Files.isRegularFile(p)) {
+            return Files.readAllBytes(p);
+        }
+        try (var in = GameData.class.getResourceAsStream("/ab3d/includes/" + name)) {
+            if (in != null) {
+                return in.readAllBytes();
+            }
+        }
+        throw new IOException("no '" + name + "' on the disks, under " + root
+                              + ", or in this build");
+    }
+
+    /** Whether {@link #bytes} would find it, without reading it. */
+    public boolean has(String name) {
+        return Files.isRegularFile(include(name))
+               || GameData.class.getResource("/ab3d/includes/" + name) != null;
+    }
+
     /** The one entry of a directory whose name matches but for its case. */
     private static Path sameName(Path dir, String name, boolean wantFile) {
         if (!Files.isDirectory(dir)) {

@@ -24,7 +24,7 @@ public final class SineTable {
     }
 
     public static SineTable load(GameData game) throws IOException {
-        byte[] raw = Files.readAllBytes(game.root().resolve("includes/bigsine"));
+        byte[] raw = game.bytes("bigsine");
         short[] t = new short[raw.length / 2];
         for (int i = 0; i < t.length; i++) {
             t[i] = (short) (((raw[i * 2] & 0xff) << 8) | (raw[i * 2 + 1] & 0xff));

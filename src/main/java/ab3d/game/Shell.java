@@ -106,7 +106,7 @@ public final class Shell {
         this.after = TitleScreen.load(game, "titlescrnraw1");
         this.menu = MenuData.load(game);
         this.option = new OptionScreen(OptFont.load(game));
-        this.rain = readRain(Files.readAllBytes(game.include("optcop")));
+        this.rain = readRain(game.bytes("optcop"));
         this.levels = LevelNames.load(game);
         this.controls = Controls.load(game);
         setLevel(0);

@@ -98,7 +98,7 @@ public final class BitMapObj {
             objIntoCop[i] = (short) x[i];
         }
 
-        byte[] c = Files.readAllBytes(game.root().resolve("includes/constantfile"));
+        byte[] c = game.bytes("constantfile");
         constStep = new int[c.length / 8];
         for (int i = 0; i < constStep.length; i++) {
             int o = i * 8;

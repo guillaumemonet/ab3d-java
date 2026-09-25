@@ -52,12 +52,11 @@ public final class FloorTexture {
         if (tile == null || !Files.isRegularFile(tile)) {
             tile = game.include("floortile");
         }
-        Path pal = game.root().resolve("includes/floorpalscaled");
-        if (!Files.isRegularFile(tile) || !Files.isRegularFile(pal)) {
-            throw new IOException("Missing floortile or floorpalscaled under " + game.root());
+        if (!Files.isRegularFile(tile)) {
+            throw new IOException("Missing floortile under " + game.root());
         }
         return new FloorTexture(SbDepacker.unpack(Files.readAllBytes(tile)),
-                                SbDepacker.unpack(Files.readAllBytes(pal)));
+                                SbDepacker.unpack(game.bytes("floorpalscaled")));
     }
 
     /** Index at tile position (u, v), for a surface's {@code whichtile} offset. */

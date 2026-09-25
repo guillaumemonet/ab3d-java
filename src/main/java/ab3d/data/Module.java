@@ -46,7 +46,7 @@ public final class Module {
     private final int patternCount;
 
     public static Module load(GameData game, String name) throws IOException {
-        return new Module(Files.readAllBytes(game.include(name)));
+        return new Module(game.bytes(name));
     }
 
     public Module(byte[] data) {

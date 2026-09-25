@@ -78,7 +78,7 @@ public final class StripDraw {
             xToCop[i] = (short) x[i];
         }
 
-        byte[] c = Files.readAllBytes(game.root().resolve("includes/constantfile"));
+        byte[] c = game.bytes("constantfile");
         int n = c.length / 8;
         stepByDepth = new int[n];
         baseByDepth = new int[n];

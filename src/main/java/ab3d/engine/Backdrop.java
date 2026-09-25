@@ -43,7 +43,7 @@ public final class Backdrop {
     public Backdrop(EngineState state, GameData game) throws IOException {
         this.s = state;
         this.picture = SbDepacker.unpack(
-                Files.readAllBytes(game.root().resolve("includes/backfile")));
+                game.bytes("backfile"));
     }
 
     /**

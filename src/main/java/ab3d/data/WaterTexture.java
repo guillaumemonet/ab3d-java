@@ -38,8 +38,8 @@ public final class WaterTexture {
 
     public static WaterTexture load(GameData game) throws IOException {
         return new WaterTexture(
-                SbDepacker.unpack(Files.readAllBytes(game.root().resolve("includes/waterfile"))),
-                SbDepacker.unpack(Files.readAllBytes(game.root().resolve("includes/brightenfile"))));
+                SbDepacker.unpack(game.bytes("waterfile")),
+                SbDepacker.unpack(game.bytes("brightenfile")));
     }
 
     /** {@code move.w (a0,d5.w*4),d0}: the water word at a packed coordinate. */
