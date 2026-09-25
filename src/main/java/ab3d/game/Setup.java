@@ -74,17 +74,12 @@ public final class Setup {
                 : Paths.get(saved.getProperty(KEY_ROOT));
         Path disk = saved.getProperty(KEY_DISK) == null ? null
                 : Paths.get(saved.getProperty(KEY_DISK));
-        if (usable(root) && Files.isDirectory(disk == null ? home() : disk)) {
-            return new Paths2(root, disk);
+        if (disk != null && Files.isDirectory(disk.resolve("disk2/levels"))) {
+            return new Paths2(root == null ? home().resolve("no-source-tree") : root,
+                              disk);
         }
 
         return ask();
-    }
-
-    /** A source tree is usable when the files this port reads are in it. */
-    private static boolean usable(Path root) {
-        return root != null && Files.isRegularFile(root.resolve("source/jg.s"))
-               && Files.isRegularFile(root.resolve("includes/bigsine"));
     }
 
     /** The first-run conversation, and the unpacking that follows it. */
@@ -93,39 +88,24 @@ public final class Setup {
                 """
                 Alien Breed 3D -- portage Java
 
-                Ce programme ne contient aucune donnee du jeu. Il lui faut :
+                Il faut les deux disquettes (.adf) du jeu. Elles portent les
+                seize niveaux, les sons, les sprites et les textures.
 
-                  1. les deux disquettes (.adf) du jeu, que tu peux indiquer
-                     ou faire telecharger
-                  2. l'arbre des sources publie par Team17, celui qui contient
-                     source/jg.s et includes/bigsine
-
-                Les deux sont necessaires : quatre des vingt-deux fichiers lus
-                sont sur les disquettes, tout le reste etait compile dans
-                l'executable Amiga et n'existe que dans les sources.
+                Le reste -- la table des sinus, le fond de ciel, le bandeau,
+                la police du menu, les tables d'ombrage et la musique -- etait
+                compile dans l'executable Amiga et n'est sur aucune disquette.
+                Ce programme le porte lui-meme.
 
                 Ce qui suit n'est demande qu'une fois.""",
                 "Premier lancement", JOptionPane.INFORMATION_MESSAGE);
-
-        Path root = chooseDirectory("Ou est l'arbre des sources ? "
-                + "(le dossier contenant source/ et includes/)");
-        if (root == null) {
-            return null;
-        }
-        if (!usable(root)) {
-            JOptionPane.showMessageDialog(null,
-                    "Ce dossier ne contient pas source/jg.s et includes/bigsine.",
-                    "Pas le bon dossier", JOptionPane.ERROR_MESSAGE);
-            return null;
-        }
 
         Path disk = home().resolve("disk");
         if (!findDisks(disk)) {
             return null;
         }
 
-        save(root, disk);
-        return new Paths2(root, disk);
+        save(home().resolve("no-source-tree"), disk);
+        return new Paths2(home().resolve("no-source-tree"), disk);
     }
 
     /**
@@ -183,14 +163,6 @@ public final class Setup {
     private static void failed(String what, Exception e) {
         JOptionPane.showMessageDialog(null, what + " : " + e.getMessage(),
                                       "Echec", JOptionPane.ERROR_MESSAGE);
-    }
-
-    private static Path chooseDirectory(String title) {
-        JFileChooser c = new JFileChooser();
-        c.setDialogTitle(title);
-        c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        return c.showOpenDialog(null) == JFileChooser.APPROVE_OPTION
-                ? c.getSelectedFile().toPath() : null;
     }
 
     private static List<Path> chooseAdfs() {

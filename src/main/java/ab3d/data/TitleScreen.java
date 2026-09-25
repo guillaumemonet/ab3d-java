@@ -64,7 +64,7 @@ public final class TitleScreen {
     }
 
     public static TitleScreen load(GameData game, String name) throws IOException {
-        byte[] raw = Files.readAllBytes(game.include(name));
+        byte[] raw = game.bytes(name);
         if (SbDepacker.isPacked(raw)) {
             raw = SbDepacker.unpack(raw);
         }

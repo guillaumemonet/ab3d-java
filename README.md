@@ -33,27 +33,27 @@ passe en mourant.
 
 ## Faire tourner
 
-Il faut le jeu d'origine. Les **deux disquettes** (`.adf`) en portent
-l'essentiel : les seize niveaux, les sons, les seize feuilles de sprites, les
-quatorze textures de murs, les carreaux de sol, l'écran-titre. Sur les
-cinquante-deux fichiers que le moteur ouvre, quarante-trois viennent de là —
-413 Ko.
+Il faut **les deux disquettes du jeu** (`.adf`), et rien d'autre.
 
-Il en reste **six**, que l'exécutable Amiga avait compilés dedans et qui ne sont
-donc sur aucune des deux disquettes : la table des sinus (`bigsine`), le fond de
-ciel (`backfile`), les tables d'ombrage et d'eau (`brightenfile`, `waterfile`),
-la palette de sol (`floorpalscaled`) et la table de pas (`constantfile`) —
-191 Ko en tout. Ceux-là viennent de **l'arbre des sources** publié par Team17.
+Elles portent les seize niveaux, les sons, les seize feuilles de sprites, les
+quatorze textures de murs, les carreaux de sol et l'écran-titre : quarante-cinq
+des soixante-dix fichiers que le moteur ouvre, 501 Ko.
 
-`gradle tool -Ptool=DiskCoverCheck` fait ce compte lui-même et dit précisément
-ce qui manque.
+Les vingt-deux autres — table des sinus, fond de ciel, bandeau et ses bordures,
+police du menu, palettes, tables d'ombrage et d'eau, icônes de clés, les trois
+modules de musique — n'ont jamais été sur une disquette : l'exécutable Amiga les
+avait compilés dedans avec `INCBIN`. Ce dépôt les porte donc lui-même, 307 Ko
+dans `src/main/resources/ab3d/includes/`. Deux de plus sont **calculés** plutôt
+que livrés, et deux ne sont nulle part (`uglymonster`, qu'aucun niveau ne place).
 
-**Rien de tout cela n'est dans ce dépôt**, qui ne contient que du code Java.
+L'arbre des sources publié par Team17 n'est plus nécessaire pour jouer. Il reste
+utile pour les contrôles de conformité, qui comparent le portage à l'assembleur,
+et `gradle tool -Ptool=DiskCoverCheck` refait ce compte lui-même à tout moment.
 
 Depuis un checkout :
 
 ```
-gradle run -Dab3d.root=../ab3d-rtg -Dab3d.disk=../adf-extract
+gradle run -Dab3d.disk=../adf-extract
 ```
 
 ### Application autonome
@@ -63,16 +63,14 @@ gradle jpackage
 ```
 
 produit dans `build/dist/` une application avec sa propre JVM, qui n'exige rien
-d'installé. Elle ne contient aucune donnée du jeu : au premier lancement elle
-demande où sont les disquettes et l'arbre des sources, extrait les deux images
+d'installé. Au premier lancement elle demande les deux disquettes, les extrait
 elle-même (le lecteur ADF gère OFS et FFS) et retient la réponse dans
 `~/.ab3d-java`. Les lancements suivants démarrent directement.
 
-Pour les disquettes, le premier lancement propose deux routes : indiquer tes
-propres fichiers `.adf`, ou les prendre sur **Dream17**, l'archive de
-préservation Amiga, qui les sert toutes les deux dans un même fichier. Rien
-n'est téléchargé sans que le choix soit fait. L'arbre des sources est demandé
-dans les deux cas, pour les six fichiers qui ne sont sur aucune disquette.
+Deux routes pour les disquettes : indiquer tes propres fichiers `.adf`, ou les
+prendre sur **Dream17**, l'archive de préservation Amiga, qui les sert toutes
+les deux dans un même fichier. Rien n'est téléchargé sans que le choix soit
+fait.
 
 `-Ppackage=msi` (ou `deb`, `dmg`) produit un installeur natif à la place, si les
 outils correspondants sont présents.
@@ -200,6 +198,14 @@ l'eau, dont la table n'a jamais été convertie pour cette version du moteur.
 
 ## Licence
 
-Le code de ce dépôt est publié tel quel. **Les données du jeu ne s'y trouvent
-pas** et restent la propriété de leurs ayants droit — il faut posséder une copie
-d'Alien Breed 3D pour faire tourner ce portage.
+Le code de ce dépôt est publié tel quel.
+
+`src/main/resources/ab3d/includes/` contient 307 Ko de données d'origine de
+**Team17** : les vingt-deux fichiers que l'exécutable Amiga avait compilés
+dedans et qui ne sont sur aucune disquette. Sans eux le portage ne compile ni ne
+tourne, et aucune règle ne les reproduit. Ils restent la propriété de leurs
+ayants droit, comme tout le reste du contenu du jeu.
+
+Les niveaux, les sons, les sprites et les textures ne sont **pas** dans ce
+dépôt : il faut posséder une copie d'Alien Breed 3D pour faire tourner ce
+portage.

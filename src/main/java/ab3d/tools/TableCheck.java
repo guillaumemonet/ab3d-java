@@ -35,6 +35,13 @@ public final class TableCheck {
 
     public static void main(String[] args) throws Exception {
         GameData real = GameData.fromSystemProperty();
+        if (!java.nio.file.Files.isRegularFile(real.root().resolve("source/jg.s"))) {
+            System.out.println("There is no source tree at " + real.root()
+                    + ", so both sides of this comparison would be the saved\n"
+                    + "table and it would pass without meaning anything. Point\n"
+                    + "-Dab3d.root at the Team17 source release to run it.");
+            return;
+        }
         GameData none = GameData.from(Path.of("no-such-source-tree"), real.disk());
 
         EndZones a = EndZones.load(real);

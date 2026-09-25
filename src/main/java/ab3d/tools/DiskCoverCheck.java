@@ -49,6 +49,8 @@ public final class DiskCoverCheck {
         "healthstrip", "ammostrip",
         // the title screen, the menu font and the rain behind the options
         "titlescrnraw", "titlescrnpal", "OptFont", "optcop",
+        // the four key icons the panel lights up
+        "greenkey", "redkey", "yellowkey", "bluekey",
         // the floor sheet, which disk one does carry
         "floortile",
         // and the music

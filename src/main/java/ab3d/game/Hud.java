@@ -58,7 +58,7 @@ public final class Hud {
     }
 
     private static byte[] read(GameData game, String name) throws IOException {
-        return java.nio.file.Files.readAllBytes(game.include(name));
+        return game.bytes(name);
     }
 
     /**
