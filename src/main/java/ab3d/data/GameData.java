@@ -27,10 +27,22 @@ public final class GameData {
      */
     private Path disk;
 
-    /** Resolves the roots from the {@code ab3d.root} and {@code ab3d.disk} properties. */
+    /**
+     * Resolves the roots from the {@code ab3d.root} and {@code ab3d.disk}
+     * properties, or from what the first run remembered.
+     *
+     * A checkout run from its own tree gives the two properties and nothing else
+     * happens. A packaged copy gives neither, and then {@code from} is what the
+     * player was asked for once and it was written down.
+     */
     public static GameData fromSystemProperty() {
-        GameData g = new GameData(Paths.get(System.getProperty("ab3d.root", "../ab3d-rtg")));
-        g.disk = Paths.get(System.getProperty("ab3d.disk", "../adf-extract")).toAbsolutePath().normalize();
+        return from(Paths.get(System.getProperty("ab3d.root", "../ab3d-rtg")),
+                    Paths.get(System.getProperty("ab3d.disk", "../adf-extract")));
+    }
+
+    public static GameData from(Path root, Path disk) {
+        GameData g = new GameData(root);
+        g.disk = disk.toAbsolutePath().normalize();
         return g;
     }
 

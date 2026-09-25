@@ -160,6 +160,15 @@ public final class Ab3dGame extends SimpleApplication
     private boolean oldFire;
 
     public static void main(String[] args) {
+        // Where the game's own files are. A checkout says so on the command
+        // line; a packaged copy asks once and writes the answer down.
+        ab3d.game.Setup.Paths2 where = ab3d.game.Setup.resolve();
+        if (where == null) {
+            return;                       // the player did not say, so nothing to run
+        }
+        System.setProperty("ab3d.root", where.root().toString());
+        System.setProperty("ab3d.disk", where.disk().toString());
+
         Ab3dGame app = new Ab3dGame();
         if (args.length > 0) {
             app.levelName = args[0];

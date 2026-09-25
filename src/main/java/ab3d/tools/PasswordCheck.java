@@ -106,9 +106,7 @@ public final class PasswordCheck {
             if (back != null && back.level() == level) {
                 levelsOk++;
             }
-            if (level < 4) {
-                System.out.printf("  level %2d: %s%n", level + 1, w);
-            }
+            System.out.printf("  level %2d: %s%n", level + 1, w);
         }
         System.out.printf("levels: %d of 16 come back%n", levelsOk);
     }

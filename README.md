@@ -33,17 +33,41 @@ passe en mourant.
 
 ## Faire tourner
 
-Il faut le jeu d'origine : les sources assembleur et le répertoire `includes/`
-d'un côté, les disquettes extraites de l'autre. **Rien de tout cela n'est dans
-ce dépôt** — il ne contient que du code Java.
+Il faut le jeu d'origine, et il en faut **deux morceaux distincts** :
+
+1. **les deux disquettes** (`.adf`), qui portent les niveaux, les sons, les
+   graphismes de murs et d'objets ;
+2. **l'arbre des sources** publié par Team17, dont le répertoire `includes/`
+   contient tout ce que l'exécutable Amiga avait compilé dedans — table des
+   sinus, palettes, bordures d'écran, police du menu, les trois modules de
+   musique, tables d'ombrage et d'eau, fond de ciel — et dont les fichiers
+   assembleur servent encore de source aux tables.
+
+Sur les vingt-deux fichiers lus à l'exécution, **quatre seulement sont sur les
+disquettes**. Les avoir ne suffit donc pas.
+
+**Rien de tout cela n'est dans ce dépôt**, qui ne contient que du code Java.
+
+Depuis un checkout :
 
 ```
 gradle run -Dab3d.root=../ab3d-rtg -Dab3d.disk=../adf-extract
 ```
 
-`ab3d.root` désigne l'arborescence des sources (le portage y lit `source/jg.s`,
-`source/anims`, `includes/…`), `ab3d.disk` les fichiers extraits des disquettes
-(niveaux, sons).
+### Application autonome
+
+```
+gradle jpackage
+```
+
+produit dans `build/dist/` une application avec sa propre JVM, qui n'exige rien
+d'installé. Elle ne contient aucune donnée du jeu : au premier lancement elle
+demande où sont les disquettes et l'arbre des sources, extrait les deux images
+elle-même (le lecteur ADF gère OFS et FFS) et retient la réponse dans
+`~/.ab3d-java`. Les lancements suivants démarrent directement.
+
+`-Ppackage=msi` (ou `deb`, `dmg`) produit un installeur natif à la place, si les
+outils correspondants sont présents.
 
 ### Commandes
 
@@ -62,14 +86,15 @@ reconfigurables depuis **CONTROL OPTIONS**.
 | `L` | regarder derrière |
 | `1`–`5` | fusil à impulsion, à pompe, plasma, grenades, roquettes |
 
-Pour changer de niveau, **PASSWORD** dans le menu :
+Pour changer de niveau, **PASSWORD** dans le menu. Les disquettes portent les
+**seize** niveaux, et tous se chargent :
 
-| Niveau | Mot de passe |
-|---|---|
-| 1 — The Gate | `KLLKFFFFFFFFFFFF` |
-| 2 — Storage Bay | `KOLKFNFFFFFFFFFF` |
-| 3 — Sewer Network | `OKLKFHFFFFFFFFFF` |
-| 4 — The Courtyard | `KPLKFPFFFFFFFFFF` |
+| | | | |
+|---|---|---|---|
+| 1 The Gate `KLLKFFFFFFFFFFFF` | 2 Storage Bay `KOLKFNFFFFFFFFFF` | 3 Sewer Network `OKLKFHFFFFFFFFFF` | 4 The Courtyard `KPLKFPFFFFFFFFFF` |
+| 5 System Purge `PLOPNFFFFFFFFFFF` | 6 The Mines `POOPNNFFFFFFFFFF` | 7 The Furnace `KKLKNHFFFFFFFFFF` | 8 Test Arena Gamma `PPOPNPFFFFFFFFFF` |
+| 9 Surface Zone `LLLKHFFFFFFFFFFF` | 10 Training Area `LOLKHNFFFFFFFFFF` | 11 Admin Block `PKLKHHFFFFFFFFFF` | 12 The Pit `LPLKHPFFFFFFFFFF` |
+| 13 Strata `OLLKPFFFFFFFFFFF` | 14 Reactor Core `OOLKPNFFFFFFFFFF` | 15 Cooling Tower `LKLKPHFFFFFFFFFF` | 16 Command Centre `OPLKPPFFFFFFFFFF` |
 
 ![Le niveau 3](docs/images/level_c.png)
 

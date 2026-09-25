@@ -129,3 +129,74 @@ tasks.register('tool', JavaExec) {
     systemProperty 'ab3d.disk', System.getProperty('ab3d.disk') ?: '../adf-extract'
     if (project.hasProperty('appArgs')) { args project.appArgs.split(' ') }
 }
+
+// ---------------------------------------------------------------------------
+// Packaging
+//
+// jpackage makes a self-contained application with its own Java runtime, so the
+// player needs nothing installed. It carries no game data: the first run asks
+// where the floppies and the source tree are, unpacks the disks once, and
+// remembers the answer.
+// ---------------------------------------------------------------------------
+
+tasks.register('runtimeJar', Jar) {
+    group = 'distribution'
+    description = 'One jar holding the port and everything it links against'
+    archiveBaseName = 'ab3d'
+    manifest {
+        attributes 'Main-Class': 'ab3d.Ab3dGame'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from sourceSets.main.output
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    // signatures from the dependencies do not survive being merged
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA',
+            'module-info.class'
+}
+
+tasks.register('jpackage', Exec) {
+    group = 'distribution'
+    description = 'Builds a self-contained application around the jar'
+    dependsOn 'runtimeJar'
+
+    def input = layout.buildDirectory.dir('jpackage-input').get().asFile
+    def out = layout.buildDirectory.dir('dist').get().asFile
+
+    // jpackage lives in the toolchain's own JDK, not necessarily on the PATH:
+    // the java on the PATH here is a version 8 that cannot even load the jar.
+    def launcher = javaToolchains.launcherFor(java.toolchain).get()
+    def tool = launcher.metadata.installationPath.file(
+            'bin/jpackage' + (org.gradle.internal.os.OperatingSystem.current()
+                    .isWindows() ? '.exe' : '')).asFile.absolutePath
+
+    // app-image by default: it needs nothing installed beyond the JDK, where an
+    // msi wants the WiX toolset and a deb wants dpkg. Ask for another with
+    // -Ppackage=msi once those are there.
+    def type = project.findProperty('package') ?: 'app-image'
+
+    doFirst {
+        input.deleteDir()
+        input.mkdirs()
+        out.mkdirs()
+        copy {
+            from tasks.runtimeJar.archiveFile
+            into input
+        }
+    }
+
+    commandLine tool,
+        '--type', type,
+        '--name', 'AlienBreed3D',
+        '--app-version', project.version.toString(),
+        '--vendor', 'Guillaume Monet',
+        '--description', "Portage Java du moteur d'Alien Breed 3D",
+        '--input', input.absolutePath,
+        '--main-jar', 'ab3d-' + project.version + '.jar',
+        '--main-class', 'ab3d.Ab3dGame',
+        '--dest', out.absolutePath,
+        '--java-options', '-Xmx1g'
+}

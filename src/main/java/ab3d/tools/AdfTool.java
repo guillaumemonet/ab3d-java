@@ -65,6 +65,38 @@ public final class AdfTool {
     /** A file on the disk. */
     public record Entry(String path, int size, int headerBlock) {}
 
+    /**
+     * Writes every file on the disk out, keeping the directories it had.
+     *
+     * The first run uses this to unpack the two floppies once, so nobody has to
+     * do it by hand before the game will start.
+     */
+    public int extractAll(Path to) throws IOException {
+        List<Entry> entries = list();
+        for (Entry e : entries) {
+            Path dst = to.resolve(e.path);
+            Files.createDirectories(dst.getParent());
+            Files.write(dst, read(e));
+        }
+        return entries.size();
+    }
+
+    /**
+     * Whether a directory of that name is on the disk.
+     *
+     * Which floppy is which is told from what it holds rather than from its file
+     * name, because those vary with whoever made the image: the one carrying
+     * {@code levels} is the second.
+     */
+    public boolean has(String directory) {
+        for (Entry e : list()) {
+            if (e.path.equals(directory) || e.path.startsWith(directory + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public String volumeName() {
         return nameOf(ROOT_BLOCK);
     }
