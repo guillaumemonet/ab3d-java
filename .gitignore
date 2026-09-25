@@ -7,9 +7,11 @@ build/
 *.iml
 .vscode/
 
-# The original game's own files never belong here: this repository holds the
-# Java port and nothing else.
-includes/
-sounds/
+# Les donnees du jeu extraites des disquettes n'ont pas leur place ici : les
+# niveaux, les sons, les sprites et les textures restent chez celui qui possede
+# le jeu. Les motifs sont ancres a la racine -- sans la barre de tete ils
+# attrapaient aussi src/main/resources/ab3d/includes/, qui lui doit etre suivi.
+/includes/
+/sounds/
 *.adf
 build/dist/
