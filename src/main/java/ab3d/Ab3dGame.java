@@ -121,6 +121,8 @@ public final class Ab3dGame extends SimpleApplication
     private int energy = Border.ENERGY_MAX, ammo = Border.AMMO_MAX;
     /** The title screen and the option screens, up until the level starts. */
     private Shell shell;
+    /** {@code ENDZONES}: the room that finishes each level. */
+    private ab3d.data.EndZones endZones;
     /** {@code MakeSomeNoise} and the four channels it writes to. */
     private Noise noise;
 
@@ -191,6 +193,7 @@ public final class Ab3dGame extends SimpleApplication
                 System.out.println("no audio output; the game runs silent");
             }
             shell = new Shell(game);
+            endZones = ab3d.data.EndZones.load(game);
             controls = shell.controls;
             shell.setLevel(levelName.charAt(levelName.length() - 1) - 'a');
             if (useTranscribed) {
@@ -335,7 +338,16 @@ public final class Ab3dGame extends SimpleApplication
             case KeyInput.KEY_ESCAPE -> shell.show("ONEPLAYERMENU_TXT");
             case KeyInput.KEY_SPACE, KeyInput.KEY_RETURN, KeyInput.KEY_NUMPADENTER -> {
                 switch (shell.select()) {
-                    case PLAY -> shell.state = Shell.State.PLAY;
+                    case PLAY -> {
+                        if (noise != null) {
+                            noise.music.stop();      // jsr mt_end
+                        }
+                        // playgame: move.w MAXLEVEL,PLOPT, and SETPLAYERS makes
+                        // the file name from it. A level won moved MAXLEVEL on,
+                        // so the one loaded may not be the one just played.
+                        loadLevel(shell.levelFile());
+                        shell.state = Shell.State.PLAY;
+                    }
                     case PASSWORD -> shell.startPassword();
                     case CREDITS -> shell.show("CREDITMENU_TXT");
                     case CONTROLS -> shell.show("CONTROL_TXT");
@@ -355,12 +367,17 @@ public final class Ab3dGame extends SimpleApplication
      * things: the name comes from {@code LEVEL_OPTS}, the level from the disk.
      */
     private void loadLevel(String name) {
+        if (name.equals(levelName) && frame != null && player != null
+                && frame.objectHandler.energy > 0) {
+            return;                       // already loaded and still playable
+        }
         try {
             GameData game = GameData.fromSystemProperty();
             Level next = Level.load(game, name);
             level = next;
             levelName = name;
             player = new Player(level);
+            energy = Border.ENERGY_MAX;
             if (useTranscribed) {
                 frame = new Frame68k(level, game);
                 frame.setSound(noise);
@@ -415,6 +432,19 @@ public final class Ab3dGame extends SimpleApplication
             frame.objectHandler.energy = frame.usePlayer(frame.objectHandler.energy);
             energy = frame.objectHandler.energy;
             ammo = frame.gunData.shownAmmo(frame.gunSelected);
+
+            // The whole win condition: cmp.w (a0,d1.w*2),d0 / beq end, against
+            // ENDZONES. Losing is tst.w PLR1_energy / ble end, and the two meet
+            // at the same place -- only tst.w Energy / bgt wevewon tells them
+            // apart once they are there.
+            boolean won = player.camera.zone == endZones.of(shell.maxLevel);
+            if (won || energy <= 0) {
+                shell.endLevel(won, playerState());
+                // wevewon and wevelost: each has its own module, and both set
+                // UseAllChannels -- the jingles take all four voices, where the
+                // music during a level only ever has two
+                playJingle(won ? "welldone" : "gameover");
+            }
             spaceTapped = false;
             frame.render(player.camera.zone, player.camera.x, player.camera.z,
                          player.camera.yoff, player.camera.angle);
@@ -441,6 +471,45 @@ public final class Ab3dGame extends SimpleApplication
                 "%s  zone %3d   x %5d  z %5d   angle %4d   zones %d  sprites %d  [old]",
                 level.name, player.camera.zone, player.camera.x, player.camera.z,
                 player.camera.angle, renderer.lastVisitCount, renderer.lastSpriteCount));
+    }
+
+    /**
+     * {@code move.l #welldone,mt_data / st UseAllChannels / jsr mt_init}.
+     *
+     * Neither jingle is gated on the preference byte that keeps the background
+     * music silent, so these are the two pieces of music this build actually
+     * plays.
+     */
+    private void playJingle(String name) {
+        if (noise == null) {
+            return;
+        }
+        try {
+            ab3d.data.Module m = ab3d.data.Module.load(
+                    GameData.fromSystemProperty(), name);
+            if (m.isProTracker()) {
+                noise.music.init(m, true);
+            }
+        } catch (Exception e) {
+            // no module on this disk: the level still ends, just quietly
+        }
+    }
+
+    /**
+     * What {@code CALCPASSWORD} needs: the state the level is being left in.
+     *
+     * Only the ammunition of the five guns the password carries, which are the
+     * ones the table reads at nought, one, two, four and seven.
+     */
+    private ab3d.game.Password.State playerState() {
+        int[] ammo = new int[5];
+        int[] slots = {0, 1, 2, 4, 7};
+        for (int i = 0; i < slots.length; i++) {
+            ammo[i] = frame.gunData.unsigned(slots[i], GunData.AMMO);
+        }
+        return new ab3d.game.Password.State(
+                energy, shell.maxLevel,
+                frame.gunData.has(7) ? 1 : 0, ammo);
     }
 
     /** jME textures start at the bottom row, the composite screen at the top. */

@@ -55,6 +55,16 @@ public final class Noise implements ab3d.engine.Sound {
     }
 
     private final Voice[] voices = new Voice[VOICES];
+    /**
+     * {@code mt_music}, mixed into the same buffer.
+     *
+     * The Amiga has four channels and the music and the effects share them; this
+     * keeps the two apart in the code but adds them together at the end, which
+     * comes to the same thing at the speaker.
+     */
+    public final ModPlayer music = new ModPlayer();
+    /** How many of its own frames the mixer has left before the next music tick. */
+    private double untilTick;
 
     /** Sounds asked for and sounds actually started, for checking. */
     public int asked, played, dropped, noRoom;
@@ -200,6 +210,21 @@ public final class Noise implements ab3d.engine.Sound {
         while (running) {
             java.util.Arrays.fill(out, (byte) 0);
             synchronized (this) {
+                // the replayer runs once a display frame, so its ticks are
+                // spaced through the buffer rather than taken all at once
+                int done = 0;
+                while (done < BUFFER) {
+                    if (untilTick <= 0) {
+                        music.tick();
+                        untilTick = Samples.RATE / ModPlayer.HZ;
+                    }
+                    int run = (int) Math.min(BUFFER - done, Math.ceil(untilTick));
+                    byte[] part = new byte[run * 4];
+                    music.mix(part, run, Samples.RATE);
+                    System.arraycopy(part, 0, out, done * 4, run * 4);
+                    untilTick -= run;
+                    done += run;
+                }
                 for (Voice v : voices) {
                     if (v.data == null) {
                         continue;

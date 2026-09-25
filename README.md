@@ -22,7 +22,14 @@ rendu logiciel complet (murs, sols, plafonds, sprites, arme en main, fond de
 ciel, eau), bandeau et jauges, portes, ascenseurs, interrupteurs, clés et
 conditions, ramassages, cinq types d'ennemis qui rôdent, repèrent, poursuivent,
 mordent et tirent, six armes dont trois à projectiles, explosions avec souffle
-et éclats, barils, et le son.
+et éclats, barils, le son, la fin de niveau avec son mot de passe, et le
+lecteur de modules ProTracker.
+
+Un niveau se termine quand le joueur entre dans une salle précise — `ENDZONES`
+en donne une par niveau, et c'est là toute la condition de victoire. Gagner
+ajoute un au niveau maximum et écrit le mot de passe suivant sur la ligne du
+menu ; perdre laisse cette ligne intacte, ce qui interdit de gagner un mot de
+passe en mourant.
 
 ## Faire tourner
 
@@ -123,12 +130,15 @@ Le code note ce qu'il trouve plutôt que de le lisser.
   l'adresse absolue 32, et l'atténuation du souffle disparaîtrait.
 - Le bloc qui calcule la hauteur au franchissement d'une ligne soustrait `a4`,
   qui est le pointeur de la zone de destination depuis le haut de la boucle.
+- La musique de fond ne démarre jamais : la boucle n'appelle le lecteur que si
+  l'octet 3 de `Prefsfile` vaut `'b'`, et il s'assemble à `'k4nx'`. Les deux
+  jingles de fin de niveau ne sont pas conditionnés, et sont donc la seule
+  musique que ce build joue.
 
 ## Ce qui manque
 
-Le mode deux joueurs, la musique, la sortie de niveau (les statistiques et le
-mot de passe de fin sont transcrits mais rien ne les déclenche), et les six
-types d'ennemis que les niveaux ne posent jamais.
+Le mode deux joueurs, et les six types d'ennemis que les niveaux ne posent
+jamais — robot, ver, grosse chose rouge, arbre, œil, conduite de gaz.
 
 Deux écarts assumés subsistent dans le moteur, tous deux commentés à l'endroit
 où ils sont : un refus de déplacement qui n'existe pas dans l'original, parce que

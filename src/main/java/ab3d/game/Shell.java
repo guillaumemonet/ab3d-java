@@ -37,6 +37,16 @@ public final class Shell {
         MENU,
         /** {@code PLAYTHEGAME}. */
         PLAY,
+        /**
+         * The picture between the level and the menu.
+         *
+         * {@code LOADTITLESCRN2} puts up a second painting, fades it up over
+         * sixty-four steps and straight back down, and goes to the menu. There
+         * is nothing written on it: the level's own reward is the password,
+         * which {@code CALCPASSWORD} has by then written onto the menu's own
+         * password line, waiting there when the player arrives.
+         */
+        ENDED,
     }
 
     /** What {@code READMAINMENU} does with each option of the first screen. */
@@ -62,6 +72,8 @@ public final class Shell {
                                              0x800, 0x600, 0x400, 0x200};
 
     private final TitleScreen title;
+    /** includes/titlescrnraw1, which {@code LOADTITLESCRN2} puts up after a level. */
+    private final TitleScreen after;
     private final MenuData menu;
     private final OptionScreen option;
     /** includes/optcop: the colour {@code putinrain} gives the text, per line. */
@@ -91,6 +103,7 @@ public final class Shell {
 
     public Shell(GameData game) throws IOException {
         this.title = TitleScreen.load(game);
+        this.after = TitleScreen.load(game, "titlescrnraw1");
         this.menu = MenuData.load(game);
         this.option = new OptionScreen(OptFont.load(game));
         this.rain = readRain(Files.readAllBytes(game.include("optcop")));
@@ -127,8 +140,23 @@ public final class Shell {
         return LevelNames.fileName(maxLevel);
     }
 
-    /** One frame of the fade, then the menu once it is up. */
+    /** One frame of the fade, then whatever the fade was leading to. */
     public void tick() {
+        if (state == State.ENDED) {
+            // up over sixty-four steps and straight back down again
+            fade += fadingUp ? FADE_STEP : -FADE_STEP;
+            if (fade >= FADE_FULL) {
+                fade = FADE_FULL;
+                fadingUp = false;
+            } else if (fade <= 0 && !fadingUp) {
+                fade = FADE_FULL;
+                fadingUp = true;
+                state = State.MENU;
+                show("ONEPLAYERMENU_TXT");
+                selected = 1;
+            }
+            return;
+        }
         if (state != State.TITLE) {
             return;
         }
@@ -137,6 +165,49 @@ public final class Shell {
             fade = FADE_FULL;
             state = State.MENU;
         }
+    }
+
+    /**
+     * {@code end}: the level is over, one way or the other.
+     *
+     * {@code tst.w Energy / bgt wevewon} is the whole of the difference. Winning
+     * adds one to {@code MAXLEVEL} and sets {@code FINISHEDLEVEL}, which is what
+     * makes {@code CALCPASSWORD} run at all -- a level lost leaves the password
+     * line holding whatever it held before, so dying cannot be used to earn one.
+     */
+    public void endLevel(boolean won, Password.State state) {
+        if (won) {
+            setLevel(maxLevel + 1);                 // add.w #1,MAXLEVEL
+            writePassword(Password.encode(
+                    new Password.State(state.energy(), maxLevel,
+                                       state.gunFlags(), state.gunAmmo())));
+        }
+        this.won = won;
+        this.state = State.ENDED;
+        fade = 0;
+        fadingUp = true;
+        drawn = false;
+    }
+
+    /** Which of the two the last level ended as, for the caller and the checks. */
+    public boolean won;
+
+    /** {@code PASSWORDLINE}: what the menu's password line says now. */
+    public String passwordLine() {
+        char[] row = menu.screens.get(MenuData.ONE_PLAYER).text()[PASSWORD_ROW];
+        return new String(row, PASSWORD_COL, Password.LETTERS);
+    }
+
+    /** {@code putinpassline}: the new password, onto the menu's own line. */
+    private void writePassword(String word) {
+        char[] row = menu.screens.get(MenuData.ONE_PLAYER).text()[PASSWORD_ROW];
+        for (int i = 0; i < Password.LETTERS; i++) {
+            int at = PASSWORD_COL + i;
+            if (at < MenuData.COLUMNS && i < word.length()) {
+                row[at] = word.charAt(i);
+            }
+        }
+        drawn = false;
     }
 
     /** {@code sub.w #1,d0 / bge}: up stops at the first option, it does not wrap. */
@@ -366,18 +437,19 @@ public final class Shell {
         if (!drawn) {
             redraw();
         }
+        TitleScreen picture = state == State.ENDED ? after : title;
         for (int y = 0; y < TitleScreen.HEIGHT; y++) {
             int at = y * stride;
             int lit = y & 7;
             for (int x = 0; x < TitleScreen.WIDTH; x++) {
-                int over = state == State.TITLE
+                int over = state == State.TITLE || state == State.ENDED
                         ? 0 : option.pixels[y * OptionScreen.WIDTH + x] & 3;
                 int c = switch (over) {
                     case 1 -> rgb12(rain[y]);
                     case 2 -> rgb12(BEHIND_LIT[lit]);
                     case 3 -> rgb12(GLYPH_LIT[lit]);
-                    default -> faded(title.palette[
-                            title.pixels[y * TitleScreen.WIDTH + x] & 0xff]);
+                    default -> faded(picture.palette[
+                            picture.pixels[y * TitleScreen.WIDTH + x] & 0xff]);
                 };
                 out[at++] = (byte) (c >> 16);
                 out[at++] = (byte) (c >> 8);
