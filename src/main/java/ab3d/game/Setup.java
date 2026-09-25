@@ -95,7 +95,8 @@ public final class Setup {
 
                 Ce programme ne contient aucune donnee du jeu. Il lui faut :
 
-                  1. les deux disquettes (.adf) du jeu
+                  1. les deux disquettes (.adf) du jeu, que tu peux indiquer
+                     ou faire telecharger
                   2. l'arbre des sources publie par Team17, celui qui contient
                      source/jg.s et includes/bigsine
 
@@ -118,23 +119,70 @@ public final class Setup {
             return null;
         }
 
-        List<Path> adfs = chooseAdfs();
-        if (adfs.isEmpty()) {
-            return null;
-        }
-
         Path disk = home().resolve("disk");
-        try {
-            unpack(adfs, disk);
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null,
-                    "Les disquettes n'ont pas pu etre lues : " + e.getMessage(),
-                    "Echec", JOptionPane.ERROR_MESSAGE);
+        if (!findDisks(disk)) {
             return null;
         }
 
         save(root, disk);
         return new Paths2(root, disk);
+    }
+
+    /**
+     * Where the two floppies come from: the player's own, or Dream17's archive.
+     *
+     * The choice is put once and nothing is fetched without it being taken.
+     * Dream17 is an Amiga preservation archive and its file for this game holds
+     * both disks; it does not hold the source release, which is why that is
+     * asked for either way.
+     */
+    private static boolean findDisks(Path disk) {
+        int choice = JOptionPane.showOptionDialog(null,
+                """
+                Ou sont les deux disquettes du jeu ?
+
+                Si tu as les fichiers .adf, indique-les.
+                Sinon ils peuvent etre pris sur Dream17, l'archive de
+                preservation Amiga, qui les sert tous les deux dans un
+                meme fichier d'environ 1,3 Mo.""",
+                "Les disquettes", JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE, null,
+                new Object[]{"J'ai les fichiers .adf",
+                             "Telecharger depuis Dream17", "Annuler"}, null);
+
+        if (choice == 0) {
+            List<Path> adfs = chooseAdfs();
+            if (adfs.isEmpty()) {
+                return false;
+            }
+            try {
+                unpack(adfs, disk);
+                return true;
+            } catch (IOException e) {
+                failed("Les disquettes n'ont pas pu etre lues", e);
+                return false;
+            }
+        }
+        if (choice == 1) {
+            try {
+                DiskFetch.fetch(disk, Setup::progress);
+                return true;
+            } catch (IOException e) {
+                failed("Le telechargement a echoue", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /** What the fetch says as it goes, on the console for now. */
+    private static void progress(String what) {
+        System.out.println(what);
+    }
+
+    private static void failed(String what, Exception e) {
+        JOptionPane.showMessageDialog(null, what + " : " + e.getMessage(),
+                                      "Echec", JOptionPane.ERROR_MESSAGE);
     }
 
     private static Path chooseDirectory(String title) {

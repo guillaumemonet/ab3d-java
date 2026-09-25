@@ -66,6 +66,12 @@ demande où sont les disquettes et l'arbre des sources, extrait les deux images
 elle-même (le lecteur ADF gère OFS et FFS) et retient la réponse dans
 `~/.ab3d-java`. Les lancements suivants démarrent directement.
 
+Pour les disquettes, le premier lancement propose deux routes : indiquer tes
+propres fichiers `.adf`, ou les prendre sur **Dream17**, l'archive de
+préservation Amiga, qui les sert toutes les deux dans un même fichier. Rien
+n'est téléchargé sans que le choix soit fait. L'arbre des sources est demandé
+dans les deux cas, parce qu'il n'est sur aucune des deux disquettes.
+
 `-Ppackage=msi` (ou `deb`, `dmg`) produit un installeur natif à la place, si les
 outils correspondants sont présents.
 
