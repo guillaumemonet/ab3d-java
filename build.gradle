@@ -1,0 +1,131 @@
+plugins {
+    id 'application'
+}
+
+group = 'ab3d'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+ext.jmeVersion = '3.7.0-stable'
+
+dependencies {
+    implementation "org.jmonkeyengine:jme3-core:${jmeVersion}"
+    implementation "org.jmonkeyengine:jme3-desktop:${jmeVersion}"
+    implementation "org.jmonkeyengine:jme3-lwjgl3:${jmeVersion}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = 'ab3d.Ab3dGame'
+    // Path to the original ab3d-rtg checkout holding includes/ and newsource/
+    applicationDefaultJvmArgs = ['-Dab3d.root=../ab3d-rtg', '-Dab3d.disk=../adf-extract']
+}
+
+tasks.named('run') {
+    // let -Dab3d.root=... / -Dab3d.disk=... on the gradle command line win
+    if (System.getProperty('ab3d.root') != null) {
+        systemProperty 'ab3d.root', System.getProperty('ab3d.root')
+    }
+    if (System.getProperty('ab3d.disk') != null) {
+        systemProperty 'ab3d.disk', System.getProperty('ab3d.disk')
+    }
+    if (project.hasProperty('appArgs')) {
+        args project.appArgs.split(' ')
+    }
+}
+
+// Standalone entry point for the offline inspection tools
+tasks.register('dump', JavaExec) {
+    group = 'ab3d'
+    description = 'Dump level / palette / texture information from the original data files'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.DumpTool'
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    if (project.hasProperty('appArgs')) {
+        args project.appArgs.split(' ')
+    }
+}
+
+tasks.register('frames', JavaExec) {
+    group = 'ab3d'
+    description = 'Render frames to PNG without opening a window'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.RenderTool'
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    if (project.hasProperty('appArgs')) {
+        args project.appArgs.split(' ')
+    }
+}
+
+tasks.register('map', JavaExec) {
+    group = 'ab3d'
+    description = 'Draw a top-down map of a level'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.MapTool'
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    if (project.hasProperty('appArgs')) {
+        args project.appArgs.split(' ')
+    }
+}
+
+tasks.register('textures', JavaExec) {
+    group = 'ab3d'
+    description = 'Dump the wall texture strip pools and shade palettes to PNG'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.TextureTool'
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    if (project.hasProperty('appArgs')) {
+        args project.appArgs.split(' ')
+    }
+}
+
+tasks.register('adf', JavaExec) {
+    group = 'ab3d'
+    description = 'List or extract the contents of an Amiga disk image'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.AdfTool'
+    if (project.hasProperty('appArgs')) {
+        args project.appArgs.split(' ')
+    }
+}
+
+tasks.register('printCp') {
+    doLast { println sourceSets.main.runtimeClasspath.asPath }
+}
+
+tasks.register('surfaces', JavaExec) {
+    group = 'ab3d'
+    description = 'List the surface records of a level'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.SurfaceTool'
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    if (project.hasProperty('appArgs')) { args project.appArgs.split(' ') }
+}
+
+tasks.register('objects', JavaExec) {
+    group = 'ab3d'
+    description = 'List a level objects, their graphic slot, frame and sprite size'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ab3d.tools.ObjectTool'
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    systemProperty 'ab3d.disk', System.getProperty('ab3d.disk') ?: '../adf-extract'
+    if (project.hasProperty('appArgs')) { args project.appArgs.split(' ') }
+}
+
+tasks.register('tool', JavaExec) {
+    group = 'ab3d'
+    description = 'Run one of the ab3d.tools check programs: -Ptool=KeyCheck'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "ab3d.tools.${project.findProperty('tool') ?: 'DumpTool'}"
+    systemProperty 'ab3d.root', System.getProperty('ab3d.root') ?: '../ab3d-rtg'
+    systemProperty 'ab3d.disk', System.getProperty('ab3d.disk') ?: '../adf-extract'
+    if (project.hasProperty('appArgs')) { args project.appArgs.split(' ') }
+}
