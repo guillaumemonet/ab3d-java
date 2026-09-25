@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -24,11 +25,26 @@ public final class ColBox {
 
     public static final int WORDS = 4;
 
-    private final int[][] rows;
+    private int[][] rows;
 
-    public static ColBox load(GameData game) throws IOException {
-        return new ColBox(Files.readString(game.root().resolve("source/ObjectMove"),
-                                           StandardCharsets.ISO_8859_1));
+    public static ColBox load(GameData game) {
+        Path src = game.root().resolve("source/ObjectMove");
+        if (Files.isRegularFile(src)) {
+            try {
+                return new ColBox(Files.readString(src,
+                                                   StandardCharsets.ISO_8859_1));
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved table
+            }
+        }
+        return new ColBox(ab3d.gen.Tables.COL_WIDTH, ab3d.gen.Tables.COL_HEIGHT);
+    }
+
+    private ColBox(int[] width, int[] height) {
+        rows = new int[width.length][];
+        for (int i = 0; i < width.length; i++) {
+            rows[i] = new int[]{width[i], height[i], 0, 0};
+        }
     }
 
     ColBox(String src) {

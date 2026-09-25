@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -42,7 +43,44 @@ public final class BulletAnims {
     private final int[] burstSize = new int[SLOTS];
     private final int[] force = new int[SLOTS];
 
-    public static BulletAnims load(GameData game) throws IOException {
+    public static BulletAnims load(GameData game) {
+        Path src = game.root().resolve("source/anims");
+        if (Files.isRegularFile(src)) {
+            try {
+                return fromSource(game);
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved table
+            }
+        }
+        return new BulletAnims(ab3d.gen.Tables.BULLET_FLYING_SIZE,
+                               ab3d.gen.Tables.BULLET_BURST_SIZE,
+                               ab3d.gen.Tables.BULLET_FORCE,
+                               ab3d.gen.Tables.BULLET_FLIGHT,
+                               ab3d.gen.Tables.BULLET_BURST);
+    }
+
+    /** Rebuilds what the parser found, four numbers to a step. */
+    private BulletAnims(int[] flying, int[] bursts, int[] forces,
+                        int[][] flightSteps, int[][] burstSteps) {
+        System.arraycopy(flying, 0, flyingSize, 0, SLOTS);
+        System.arraycopy(bursts, 0, burstSize, 0, SLOTS);
+        System.arraycopy(forces, 0, force, 0, SLOTS);
+        for (int i = 0; i < SLOTS; i++) {
+            flight[i] = steps(flightSteps[i]);
+            burst[i] = steps(burstSteps[i]);
+        }
+    }
+
+    private static Step[] steps(int[] flat) {
+        Step[] out = new Step[flat.length / 4];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = new Step(flat[i * 4], flat[i * 4 + 1],
+                              flat[i * 4 + 2], flat[i * 4 + 3]);
+        }
+        return out;
+    }
+
+    private static BulletAnims fromSource(GameData game) throws IOException {
         return new BulletAnims(Files.readString(
                 game.root().resolve("source/anims"), StandardCharsets.ISO_8859_1));
     }

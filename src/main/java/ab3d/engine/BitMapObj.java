@@ -1,5 +1,6 @@
 package ab3d.engine;
 
+import ab3d.data.BuiltTables;
 import ab3d.data.GameData;
 import ab3d.data.GameObject;
 import ab3d.data.SpriteBank;
@@ -91,10 +92,10 @@ public final class BitMapObj {
         this.s = state;
         this.bank = bank;
 
-        byte[] x = Files.readAllBytes(game.root().resolve("includes/xtocopx"));
-        objIntoCop = new short[x.length / 2];
+        int[] x = BuiltTables.xToCopX();
+        objIntoCop = new short[x.length];
         for (int i = 0; i < objIntoCop.length; i++) {
-            objIntoCop[i] = (short) (((x[i * 2] & 0xff) << 8) | (x[i * 2 + 1] & 0xff));
+            objIntoCop[i] = (short) x[i];
         }
 
         byte[] c = Files.readAllBytes(game.root().resolve("includes/constantfile"));

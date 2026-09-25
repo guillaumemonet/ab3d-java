@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -53,7 +54,25 @@ public final class Controls {
     /** {@code KVALTOASC}: a four-character name per raw key code. */
     private final String[] names;
 
-    public static Controls load(GameData game) throws IOException {
+    public static Controls load(GameData game) {
+        Path src = game.root().resolve("source/CONTROLLOOP.s");
+        if (Files.isRegularFile(src)) {
+            try {
+                return fromSource(game);
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved table
+            }
+        }
+        return new Controls(ab3d.gen.Tables.CONTROL_KEYS,
+                            ab3d.gen.Tables.KEY_NAMES);
+    }
+
+    private Controls(int[] saved, String[] savedNames) {
+        System.arraycopy(saved, 0, keys, 0, keys.length);
+        names = savedNames.clone();
+    }
+
+    private static Controls fromSource(GameData game) throws IOException {
         return new Controls(Files.readString(
                 game.root().resolve("source/CONTROLLOOP.s"),
                 StandardCharsets.ISO_8859_1));

@@ -1,5 +1,6 @@
 package ab3d.engine;
 
+import ab3d.data.BuiltTables;
 import ab3d.data.GameData;
 import ab3d.m68k.M68k;
 
@@ -46,13 +47,12 @@ public final class ScreenDivide {
 
     public ScreenDivide(EngineState state, GameData game) throws IOException {
         this.s = state;
-        byte[] raw = Files.readAllBytes(game.root().resolve("includes/iterfile"));
-        int n = raw.length / 4;
+        int n = BuiltTables.ITERATIONS;
         this.iters = new short[n];
         this.shift = new short[n];
         for (int i = 0; i < n; i++) {
-            iters[i] = (short) (((raw[i * 4] & 0xff) << 8) | (raw[i * 4 + 1] & 0xff));
-            shift[i] = (short) (((raw[i * 4 + 2] & 0xff) << 8) | (raw[i * 4 + 3] & 0xff));
+            iters[i] = (short) BuiltTables.iterMask(i);
+            shift[i] = (short) BuiltTables.iterShift(i);
         }
         int cap = EngineState.VIEW_COLUMNS + 2;
         this.columnAt = new int[cap];

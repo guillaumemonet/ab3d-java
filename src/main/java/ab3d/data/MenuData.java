@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,10 +53,37 @@ public final class MenuData {
         return byName.get(name);
     }
 
-    public static MenuData load(GameData game) throws IOException {
-        String src = Files.readString(game.root().resolve("source/CONTROLLOOP.s"),
-                                      StandardCharsets.ISO_8859_1);
-        return new MenuData(src);
+    public static MenuData load(GameData game) {
+        Path src = game.root().resolve("source/CONTROLLOOP.s");
+        if (Files.isRegularFile(src)) {
+            try {
+                return new MenuData(
+                        Files.readString(src, StandardCharsets.ISO_8859_1));
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved screens
+            }
+        }
+        return new MenuData(ab3d.gen.Tables.MENU_NAMES,
+                            ab3d.gen.Tables.MENU_TEXT,
+                            ab3d.gen.Tables.MENU_OPTIONS);
+    }
+
+    /** Puts back what the parser found: a name, its rows, and its choices. */
+    private MenuData(String[] names, String[][] text, int[][] options) {
+        for (int i = 0; i < names.length; i++) {
+            char[][] rows = new char[ROWS][];
+            for (int r = 0; r < ROWS; r++) {
+                rows[r] = text[i][r].toCharArray();
+            }
+            List<Option> opts = new ArrayList<>();
+            for (int o = 0; o + 2 < options[i].length; o += 3) {
+                opts.add(new Option(options[i][o], options[i][o + 1],
+                                    options[i][o + 2]));
+            }
+            Screen s = new Screen(names[i], rows, opts);
+            screens.add(s);
+            byName.put(names[i], s);
+        }
     }
 
     MenuData(String src) {
@@ -104,9 +132,19 @@ public final class MenuData {
      * {@code PASSWORDLINE} both do -- so the rows are counted rather than the
      * lines of source, and anything that is not a {@code dc.b} string is stepped
      * over.
+     *
+     * Any row the block does not give is left blank. One block is a line short:
+     * the last screen stops at thirty-one, and the
+     * thirty-second row on the Amiga would draw whatever bytes followed the
+     * block, which is nothing anyone chose. Spaces are the harmless reading of
+     * that, and leaving the row as the zeros a fresh array holds is not -- they
+     * are not a character the font has.
      */
     private static char[][] readText(String[] lines, int from) {
         char[][] out = new char[ROWS][COLUMNS];
+        for (char[] line : out) {
+            java.util.Arrays.fill(line, ' ');
+        }
         Pattern p = Pattern.compile("dc\\.b\\s+'(.*)'\\s*(;.*)?$");
         int row = 0;
         for (int i = from; i < lines.length && row < ROWS; i++) {

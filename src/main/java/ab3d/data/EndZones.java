@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -26,11 +27,30 @@ public final class EndZones {
     private static final Pattern ROW =
             Pattern.compile("^\\s*dc\\.w\\s+(-?\\d+)\\s*$");
 
-    private final int[] zones;
+    private int[] zones;
 
-    public static EndZones load(GameData game) throws IOException {
-        return new EndZones(Files.readString(game.root().resolve("source/jg.s"),
-                                             StandardCharsets.ISO_8859_1));
+    /**
+     * Reads the table from the assembly, or takes the saved answer.
+     *
+     * The generated table is what this very parser produced, so the two cannot
+     * disagree; reading the source is kept because it is what the checks compare
+     * against, and because a changed source should still win.
+     */
+    public static EndZones load(GameData game) {
+        Path src = game.root().resolve("source/jg.s");
+        if (Files.isRegularFile(src)) {
+            try {
+                return new EndZones(Files.readString(src,
+                                                     StandardCharsets.ISO_8859_1));
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved table
+            }
+        }
+        return new EndZones(ab3d.gen.Tables.END_ZONES);
+    }
+
+    private EndZones(int[] saved) {
+        zones = saved.clone();
     }
 
     EndZones(String src) {

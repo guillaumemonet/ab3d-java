@@ -29,7 +29,8 @@ import java.util.regex.Pattern;
 public final class SpriteBank {
 
     /** Slot to sheet name, from the Objects table and the loader's file list. */
-    private static final String[] SHEETS = {
+    /** The sheets the drawing code asks for, in slot order. */
+    public static final String[] SHEETS = {
         "alien2",        // 0
         "pickups",       // 1
         "bigbullet",     // 2
@@ -71,8 +72,26 @@ public final class SpriteBank {
             } catch (IOException e) {
                 sheets[i] = null;        // a sheet the repository does not carry
             }
-            frames.add(tables.getOrDefault(FRAME_LABELS[i], List.of()));
+            frames.add(tables.containsKey(FRAME_LABELS[i])
+                       ? tables.get(FRAME_LABELS[i]) : saved(i));
         }
+    }
+
+    /**
+     * The frame table this slot had when the assembly was last read.
+     *
+     * Two numbers a frame, in the order {@link ab3d.tools.TableGen} wrote them.
+     */
+    private static List<Frame> saved(int slot) {
+        if (slot >= ab3d.gen.Tables.SPRITE_FRAMES.length) {
+            return List.of();
+        }
+        int[] flat = ab3d.gen.Tables.SPRITE_FRAMES[slot];
+        List<Frame> out = new ArrayList<>(flat.length / 2);
+        for (int i = 0; i < flat.length; i += 2) {
+            out.add(new Frame(flat[i], flat[i + 1]));
+        }
+        return out;
     }
 
     /**
@@ -104,6 +123,11 @@ public final class SpriteBank {
 
     public SpriteSheet sheet(int slot) {
         return slot >= 0 && slot < sheets.length ? sheets[slot] : null;
+    }
+
+    /** How many frames a slot's table holds, for a table dumped out of it. */
+    public int frameCount(int slot) {
+        return slot >= 0 && slot < frames.size() ? frames.get(slot).size() : 0;
     }
 
     /** Frame {@code n} of a slot, falling back to the first when out of range. */

@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -25,10 +26,19 @@ public final class LevelNames {
 
     private final List<String> rows = new ArrayList<>();
 
-    public static LevelNames load(GameData game) throws IOException {
-        return new LevelNames(Files.readString(
-                game.root().resolve("source/CONTROLLOOP.s"),
-                StandardCharsets.ISO_8859_1));
+    public static LevelNames load(GameData game) {
+        Path src = game.root().resolve("source/CONTROLLOOP.s");
+        if (Files.isRegularFile(src)) {
+            try {
+                return new LevelNames(
+                        Files.readString(src, StandardCharsets.ISO_8859_1));
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved lines
+            }
+        }
+        LevelNames saved = new LevelNames("");
+        saved.rows.addAll(List.of(ab3d.gen.Tables.LEVEL_NAMES));
+        return saved;
     }
 
     LevelNames(String src) {

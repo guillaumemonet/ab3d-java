@@ -43,11 +43,31 @@ public final class Samples {
 
     private final List<Sample> samples = new ArrayList<>();
 
+    /**
+     * The sample table, from the assembly or from the saved copy.
+     *
+     * Only the table is saved: which file each number is and how long it says.
+     * The sound itself is on the second floppy either way, so this still needs
+     * the disks even when the source is gone.
+     */
     public static Samples load(GameData game) throws IOException {
-        String src = Files.readString(
-                game.root().resolve("source/loadfromdisk.s"),
-                StandardCharsets.ISO_8859_1);
-        return new Samples(src, game.disk());
+        Path src = game.root().resolve("source/loadfromdisk.s");
+        if (Files.isRegularFile(src)) {
+            return new Samples(Files.readString(src, StandardCharsets.ISO_8859_1),
+                               game.disk());
+        }
+        return new Samples(ab3d.gen.Tables.SAMPLE_NAMES,
+                           ab3d.gen.Tables.SAMPLE_LENGTHS, game.disk());
+    }
+
+    private Samples(String[] names, int[] lengths, Path disk) throws IOException {
+        Path dir = disk.resolve("disk2/sounds");
+        for (int i = 0; i < names.length; i++) {
+            Path file = dir.resolve(names[i]);
+            byte[] data = Files.isRegularFile(file) ? Files.readAllBytes(file)
+                                                    : new byte[0];
+            samples.add(new Sample(names[i], lengths[i], data));
+        }
     }
 
     Samples(String src, Path disk) throws IOException {

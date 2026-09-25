@@ -67,11 +67,35 @@ public final class SpriteSheet {
         if (!Files.isRegularFile(wad) || !Files.isRegularFile(ptr)) {
             throw new IOException("No sprite sheet '" + name + "' under " + game.root());
         }
-        Path pal = game.include(name + ".pal");
         return new SpriteSheet(name,
                 SbDepacker.unpack(Files.readAllBytes(wad)),
                 SbDepacker.unpack(Files.readAllBytes(ptr)),
-                Files.isRegularFile(pal) ? SbDepacker.unpack(Files.readAllBytes(pal)) : null);
+                palette(game, name));
+    }
+
+    /**
+     * The sheet's fifteen shades, from its file or from its top row.
+     *
+     * The floppies carry every sheet's {@code .wad} and {@code .ptr} but none of
+     * the {@code .pal}s, so a player with the disks and no source tree would
+     * have the sprites and not their colours. All that is really missing is the
+     * thirty-two colours at the top of each file: the fourteen shades below
+     * follow a rule, which {@link Shading} has. The top rows are small enough to
+     * be written down, and are.
+     */
+    private static byte[] palette(GameData game, String name) throws IOException {
+        Path pal = game.include(name + ".pal");
+        if (Files.isRegularFile(pal)) {
+            return SbDepacker.unpack(Files.readAllBytes(pal));
+        }
+        for (int i = 0; i < SpriteBank.SHEETS.length; i++) {
+            if (SpriteBank.SHEETS[i].equals(name)
+                    && i < ab3d.gen.Tables.SPRITE_PALETTE.length
+                    && ab3d.gen.Tables.SPRITE_PALETTE[i].length > 0) {
+                return Shading.ramp(ab3d.gen.Tables.SPRITE_PALETTE[i]);
+            }
+        }
+        return null;
     }
 
     /** Number of entries in the pointer table. */

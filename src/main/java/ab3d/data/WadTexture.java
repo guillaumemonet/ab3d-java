@@ -55,7 +55,7 @@ public final class WadTexture {
     }
 
     public static WadTexture load(GameData game, String fileName) throws IOException {
-        Path p = game.root().resolve("includes/walls").resolve(fileName);
+        Path p = game.include("walls/" + fileName);
         if (!Files.isRegularFile(p)) {
             throw new IOException("No wall texture " + p);
         }

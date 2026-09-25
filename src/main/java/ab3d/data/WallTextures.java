@@ -45,6 +45,11 @@ public final class WallTextures {
         "jackietest.wad",      // 14 - unused by every shipped level
     };
 
+    /** The wall files this table names, for anything that has to count them. */
+    public static String[] files() {
+        return FILES.clone();
+    }
+
     private final WadTexture[] textures = new WadTexture[FILES.length];
 
     public WallTextures(GameData game) {

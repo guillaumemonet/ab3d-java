@@ -3,6 +3,7 @@ package ab3d.data;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -33,9 +34,23 @@ public final class GunAnims {
 
     private final int[][] frames = new int[LISTS.length][];
 
-    public static GunAnims load(GameData game) throws IOException {
-        return new GunAnims(Files.readString(game.root().resolve("source/jg.s"),
-                                             StandardCharsets.ISO_8859_1));
+    public static GunAnims load(GameData game) {
+        Path src = game.root().resolve("source/jg.s");
+        if (Files.isRegularFile(src)) {
+            try {
+                return new GunAnims(Files.readString(src,
+                                                     StandardCharsets.ISO_8859_1));
+            } catch (IOException ignored) {
+                // an unreadable source simply means using the saved table
+            }
+        }
+        return new GunAnims(ab3d.gen.Tables.GUN_ANIMS);
+    }
+
+    private GunAnims(int[][] saved) {
+        for (int i = 0; i < frames.length; i++) {
+            frames[i] = i < saved.length ? saved[i].clone() : new int[0];
+        }
     }
 
     GunAnims(String src) {

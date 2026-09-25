@@ -33,18 +33,20 @@ passe en mourant.
 
 ## Faire tourner
 
-Il faut le jeu d'origine, et il en faut **deux morceaux distincts** :
+Il faut le jeu d'origine. Les **deux disquettes** (`.adf`) en portent
+l'essentiel : les seize niveaux, les sons, les seize feuilles de sprites, les
+quatorze textures de murs, les carreaux de sol, l'écran-titre. Sur les
+cinquante-deux fichiers que le moteur ouvre, quarante-trois viennent de là —
+413 Ko.
 
-1. **les deux disquettes** (`.adf`), qui portent les niveaux, les sons, les
-   graphismes de murs et d'objets ;
-2. **l'arbre des sources** publié par Team17, dont le répertoire `includes/`
-   contient tout ce que l'exécutable Amiga avait compilé dedans — table des
-   sinus, palettes, bordures d'écran, police du menu, les trois modules de
-   musique, tables d'ombrage et d'eau, fond de ciel — et dont les fichiers
-   assembleur servent encore de source aux tables.
+Il en reste **six**, que l'exécutable Amiga avait compilés dedans et qui ne sont
+donc sur aucune des deux disquettes : la table des sinus (`bigsine`), le fond de
+ciel (`backfile`), les tables d'ombrage et d'eau (`brightenfile`, `waterfile`),
+la palette de sol (`floorpalscaled`) et la table de pas (`constantfile`) —
+191 Ko en tout. Ceux-là viennent de **l'arbre des sources** publié par Team17.
 
-Sur les vingt-deux fichiers lus à l'exécution, **quatre seulement sont sur les
-disquettes**. Les avoir ne suffit donc pas.
+`gradle tool -Ptool=DiskCoverCheck` fait ce compte lui-même et dit précisément
+ce qui manque.
 
 **Rien de tout cela n'est dans ce dépôt**, qui ne contient que du code Java.
 
@@ -70,7 +72,7 @@ Pour les disquettes, le premier lancement propose deux routes : indiquer tes
 propres fichiers `.adf`, ou les prendre sur **Dream17**, l'archive de
 préservation Amiga, qui les sert toutes les deux dans un même fichier. Rien
 n'est téléchargé sans que le choix soit fait. L'arbre des sources est demandé
-dans les deux cas, parce qu'il n'est sur aucune des deux disquettes.
+dans les deux cas, pour les six fichiers qui ne sont sur aucune disquette.
 
 `-Ppackage=msi` (ou `deb`, `dmg`) produit un installeur natif à la place, si les
 outils correspondants sont présents.
@@ -120,12 +122,32 @@ destination inchangée en cas de débordement, `muls`, `swap`, l'extension de
 signe — parce que reproduire ces cas-là est souvent la différence entre une
 image juste et une image plausible.
 
-Les tables ne sont pas recopiées : elles sont **lues dans l'assembleur à
-l'exécution**. Les animations d'armes, la table des collisions, les
+Les tables ne sont pas recopiées à la main : elles sont **parsées depuis
+l'assembleur**. Les animations d'armes, la table des collisions, les
 enregistrements d'armes, les écrans de menu, les noms des échantillons, les
-touches par défaut — tout est parsé depuis `source/`. Deux entrées de la table
-des sons sont commentées ; une recopie à la main aurait décalé d'un cran tout
-ce qui suit la dixième.
+touches par défaut — tout vient de `source/`. Deux entrées de la table des sons
+sont commentées ; une recopie à la main aurait décalé d'un cran tout ce qui suit
+la dixième.
+
+Ce que ces parseurs trouvent est ensuite **écrit une fois pour toutes** dans
+`ab3d/gen/Tables.java` par `gradle tool -Ptool=TableGen`. Les parseurs restent ce
+qui décide ; le fichier généré n'est que leur réponse, gardée, pour que l'arbre
+des sources ne soit plus nécessaire à ça. `TableCheck` charge chaque table des
+deux façons et compare, ce qui est la seule chose qui rend l'opération sûre.
+
+Trois choses de plus sont **calculées au lieu d'être lues**, et chacune a son
+contrôle qui la tient à l'octet près contre le fichier d'origine :
+
+| ce qui n'est plus livré | la règle | le contrôle |
+| --- | --- | --- |
+| `xtocopx` (192 o) | `(colonne + colonne/32) × 4` — la copper list saute une paire `$106` toutes les 32 couleurs | `BuiltTableCheck` |
+| `iterfile` (2 Ko) | la plus petite puissance de deux ≥ n, et son masque | `BuiltTableCheck` |
+| les quatorze nuances de chaque `.pal` (13 Ko) | `v × (15 − nuance) / 15`, la dernière nuance au noir | `ShadeCheck` |
+
+La règle d'ombrage n'a pas été devinée : les quatorze palettes de l'arbre
+donnent 6 720 échantillons de « cette composante à cette nuance devient celle-là »
+et **aucun ne contredit un autre**. Seules les trente-deux couleurs du haut de
+chaque palette sont gardées.
 
 ## Les contrôles de conformité
 
