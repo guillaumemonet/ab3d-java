@@ -139,6 +139,8 @@ public final class Enemy {
 
     /** {@code asl.w #4,d0 / add.w d0,4(a0)}: how fast a dead flyer drops. */
     private static final int FALL_SPEED = 16;
+    /** {@code cmp.b #40,d2}: damage at or past this leaves nothing behind. */
+    private static final int GONE_FOR_GOOD = 40;
 
     /** Counters for checking. */
     public int prowled, killed, sawPlayer, charged, bites, shots, unported;
@@ -461,10 +463,8 @@ public final class Enemy {
             return false;
         }
         int lives = lv.data.u8(base + Obj.NUM_LIVES) - hurt;
-        lv.data.setU8(base + Obj.DAMAGE_TAKEN, 0);
         if (lives <= 0) {
             lv.data.setU8(base + Obj.NUM_LIVES, 0);
-            lv.data.setS16(base + Obj.THIRD_TIMER, 25);
             killed++;
             // move.w #14,Samplenum / move.w #400,Noisevol when it comes apart,
             // and its own scream when it merely dies
@@ -475,16 +475,31 @@ public final class Enemy {
             if (hurt > 1 && bullets != null && sine != null) {
                 int pt = lv.data.s16(base + Obj.POINT);
                 if (pt >= 0 && pt < lv.objectPointX.length) {
+                    // asr.w #2,d2 / tst.w d2 / bgt .ko / moveq #1,d2: a quarter
+                    // of the damage in pieces, and never fewer than one
                     bullets.explodeIntoBits(zone,
                             lv.data.u8(base + Obj.IN_TOP) != 0,
                             lv.objectPointX[pt], lv.objectPointZ[pt],
                             lv.data.s16(base + Obj.HEIGHT) << 7,
-                            hurt >> 2, rand, sine);
+                            Math.max(1, hurt >> 2), rand, sine);
                 }
             }
+            // cmp.b #40,d2 / blt .noexplode: enough force and there is no body
+            // left to lie there. move.w #-1,12(a0) puts the record out of every
+            // zone, which is how this game removes a thing.
+            if (hurt >= GONE_FOR_GOOD) {
+                lv.data.setS16(base + Obj.ZONE, -1);
+                lv.data.setS16(base + Obj.GRAPHIC_ROOM, -1);
+                return true;
+            }
+            // .noexplode: twenty-five frames of dying to play out
+            lv.data.setS16(base + Obj.THIRD_TIMER, 25);
             lv.data.setS16(base + Obj.GRAPHIC_ROOM, zone);
             return true;
         }
+        // clr.b damagetaken(a0) is on this path alone. What is dying keeps the
+        // byte, and nothing reads it again -- the dying frames never ask.
+        lv.data.setU8(base + Obj.DAMAGE_TAKEN, 0);
         lv.data.setU8(base + Obj.NUM_LIVES, lives);
         return false;
     }

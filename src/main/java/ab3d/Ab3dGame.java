@@ -134,6 +134,18 @@ public final class Ab3dGame extends SimpleApplication
     /** The transcribed chain, used unless -Dab3d.renderer=old is given. */
     private Frame68k frame;
     private boolean useTranscribed = !"old".equals(System.getProperty("ab3d.renderer"));
+
+    /**
+     * {@code -Dab3d.tell=hurt}: say on the console every time energy changes.
+     *
+     * The damage path is easy to check away from the game and hard to check
+     * inside it -- {@link ab3d.tools.HurtCheck} drives the same calls in the same
+     * order and watches the energy fall, so a fault that only shows while playing
+     * is a fault in something that check does not reach. This prints the one
+     * number that tells the two apart.
+     */
+    private static final boolean TELL_HURT =
+            "hurt".equals(System.getProperty("ab3d.tell"));
     private SineTable sine;
     private Framebuffer framebuffer;
 
@@ -438,8 +450,16 @@ public final class Ab3dGame extends SimpleApplication
                              player.stoodInTop);
             // move.w PLR1_energy,Energy, and the ammunition from the gun in hand
             // USEPLR1 takes what the enemies did, then the medikits give back
-            frame.objectHandler.energy = frame.usePlayer(frame.objectHandler.energy);
+            int wasEnergy = frame.objectHandler.energy;
+            frame.objectHandler.energy = frame.usePlayer(wasEnergy);
             energy = frame.objectHandler.energy;
+            if (TELL_HURT && energy != wasEnergy) {
+                System.err.printf("energie %d -> %d (%+d), %d morsures, "
+                                  + "%d tirs, zone %d%n",
+                                  wasEnergy, energy, energy - wasEnergy,
+                                  frame.enemies.bites, frame.enemies.shots,
+                                  player.camera.zone);
+            }
             ammo = frame.gunData.shownAmmo(frame.gunSelected);
 
             // The whole win condition: cmp.w (a0,d1.w*2),d0 / beq end, against
