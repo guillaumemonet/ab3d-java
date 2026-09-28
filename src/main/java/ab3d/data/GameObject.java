@@ -31,10 +31,22 @@ public final class GameObject {
 
     public final int index;
     public final int pointIndex;
-    public final int brightness;
-    public final int height;
+    public int brightness;
+    /**
+     * What the engine rewrites as the object lives, and the drawing reads.
+     *
+     * These five were final, read once when the level loaded. That is wrong for
+     * anything that moves: the routines write the animation straight into the
+     * record -- {@code move.l d0,8(a0)} for the graphic, {@code move.w d1,10(a0)}
+     * for the frame it dies through, {@code move.w d0,4(a0)} for the height it
+     * settles at -- and the original draws from that record, so it sees them.
+     * Here the drawing reads this object, so this object has to be kept in step;
+     * {@link ab3d.engine.ObjectHandler} does it once a frame, next to the zone it
+     * was already refreshing.
+     */
+    public int height;
     public final int widthScale, heightScale;
-    public final int slot, frame;
+    public int slot, frame;
     /**
      * True when the word at offset 12 is negative.
      *
@@ -55,7 +67,7 @@ public final class GameObject {
      * geometric test -- is what decides which zone's stream draws the sprite.
      */
     public final int inPlayZone;
-    public final int spriteWidth, spriteHeight;
+    public int spriteWidth, spriteHeight;
     /**
      * Zone the object stands in. The files leave this at -1 for many objects;
      * the engine fills it in at load time, and so does {@link Level}.
@@ -63,7 +75,7 @@ public final class GameObject {
     public int zone;
     /** The zone field as the file holds it, before {@link Level} fills it in. */
     public final int rawZone;
-    public final boolean inUpperStorey;
+    public boolean inUpperStorey;
 
     GameObject(BinReader r, int index, int off) {
         this.index = index;

@@ -37,6 +37,16 @@ public final class ObjectHandler {
                             TYPE_KEY = 4, TYPE_AMMO = 9;
     /** {@code HealFactor EQU 18} and {@code AmmoType EQU 18}: the same word. */
     private static final int EXTRA = 18;
+    /** {@code move.w #$0f0f,14(a0)}: what a clip draws as, whatever the file says. */
+    private static final int CLIP_SIZE = 0x0f0f;
+    /**
+     * {@code AMGR: dc.w 3,4,5,0,29,0,0,28}.
+     *
+     * The box a clip draws as, indexed by the gun it feeds -- the same order as
+     * the gun records. Three of the eight are nought because three of the guns
+     * have no clip anyone ever placed.
+     */
+    private static final int[] AMMO_GRAPHIC = {3, 4, 5, 0, 29, 0, 0, 28};
     /** {@code cmp.w #127,PLR1_energy}. */
     public static final int ENERGY_MAX = 127;
     /** {@code move.l #100*100,d2 / jsr CheckHit}: squared, so no root is taken. */
@@ -161,7 +171,42 @@ public final class ObjectHandler {
             // robot, the worm, the big red thing, the tree, the eyeball and the
             // gas pipe have routines of their own and are never put anywhere.
         }
+        syncDrawnState();
         return conditions;
+    }
+
+    /**
+     * Copies back what the routines just wrote, for the drawing to read.
+     *
+     * The original has no such step: every routine writes into the object's own
+     * record and {@code ObjDraw} reads that same record, so there is nothing to
+     * keep in step. This port keeps a {@link GameObject} beside the record and
+     * draws from it, which is faster to walk but has to be told.
+     *
+     * It runs after the routines rather than before them. Refreshed first, every
+     * one of these would be a frame behind -- an alien would draw the pose it
+     * held last time, and a body would take an extra frame to reach the floor.
+     */
+    private void syncDrawnState() {
+        for (int i = 0; i < lv.objects.size(); i++) {
+            int base = lv.ptrObjects + i * GameObject.SIZE;
+            if (lv.data.s16(base) < 0) {
+                break;
+            }
+            GameObject o = lv.objects.get(i);
+            o.slot = lv.data.s16(base + Obj.SLOT);
+            o.frame = lv.data.s16(base + Obj.FRAME);
+            o.height = lv.data.s16(base + Obj.HEIGHT);
+            o.brightness = lv.data.s16(base + Obj.BRIGHT);
+            o.inUpperStorey = lv.data.u8(base + Obj.IN_TOP) != 0;
+            // The pickups set their own size every frame -- $0f0f for a key or
+            // a clip, $1f1f for a barrel and $2020 while it goes up
+            o.spriteWidth = lv.data.u8(base + Obj.SPRITE_SIZE);
+            o.spriteHeight = lv.data.u8(base + Obj.SPRITE_SIZE + 1);
+            // GraphicRoom, not the zone it stands in: the two are the same for
+            // anything that has not moved, and the routines set this one last
+            o.zone = lv.data.s16(base + Obj.GRAPHIC_ROOM);
+        }
     }
 
     /** One pool of twenty shot records. */
@@ -296,10 +341,24 @@ public final class ObjectHandler {
      */
     private void ammo(GameObject o, int base, int playerZone, int px, int pz,
                       boolean playerInTop) {
-        if (guns == null || !inReach(base, playerZone, px, pz, playerInTop, 32)) {
+        if (guns == null) {
             return;
         }
-        int slot = lv.data.s16(base + EXTRA);
+        // The routine opens on its own graphic, before any test: a clip is
+        // fifteen by fifteen whatever the level file said, and which box it
+        // draws comes from AMGR, indexed by the gun it feeds.
+        lv.data.setS16(base + Obj.SPRITE_SIZE, CLIP_SIZE);
+        int type = lv.data.s16(base + EXTRA);
+        if (type >= 0 && type < AMMO_GRAPHIC.length) {
+            lv.data.setS16(base + Obj.FRAME, AMMO_GRAPHIC[type]);
+        }
+        lv.data.setS16(base + GRAPHIC_ROOM, lv.data.s16(base + IN_PLAY_ZONE));
+        lv.data.setU8(base + WORRY, 0);                // clr.b worry(a0)
+
+        if (!inReach(base, playerZone, px, pz, playerInTop, 32)) {
+            return;
+        }
+        int slot = type;
         if (slot < 0 || slot >= GunData.GUNS) {
             return;
         }
