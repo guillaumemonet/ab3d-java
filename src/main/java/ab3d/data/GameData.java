@@ -157,6 +157,30 @@ public final class GameData {
                               + ", or in this build");
     }
 
+    /**
+     * A model file, from the source tree's {@code newvectobj} or from this build.
+     *
+     * The assembly names these through an Amiga assign, {@code ab3:vectobj/...},
+     * and the directory of that name in the source release holds the editor's own
+     * working copies, which are not what was assembled -- read as a model, the
+     * one for the blue key indicator claims no points and a thousand frames.
+     * {@code newvectobj} holds the ten that do parse, in the order
+     * {@code POLYOBJECTS} names them.
+     */
+    public byte[] vector(String name) throws IOException {
+        Path p = root.resolve("newvectobj").resolve(name);
+        if (Files.isRegularFile(p)) {
+            return Files.readAllBytes(p);
+        }
+        try (var in = GameData.class.getResourceAsStream("/ab3d/vectobj/" + name)) {
+            if (in != null) {
+                return in.readAllBytes();
+            }
+        }
+        throw new IOException("no model '" + name + "' under " + root
+                              + " or in this build");
+    }
+
     /** Whether {@link #bytes} would find it, without reading it. */
     public boolean has(String name) {
         return Files.isRegularFile(include(name))

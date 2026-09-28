@@ -31,6 +31,8 @@ public final class ObjDraw {
 
     private final EngineState s;
     private final BitMapObj bitmap;
+    /** The other renderer, for the objects that are models. May be absent. */
+    private PolyObj poly;
 
     /** {@code depthtable}: depth and object index, nearest last. */
     private final int[] sortedDepth = new int[MAX_SORTED];
@@ -48,6 +50,27 @@ public final class ObjDraw {
     public ObjDraw(EngineState state, BitMapObj bitmap) {
         this.s = state;
         this.bitmap = bitmap;
+    }
+
+    /**
+     * Gives it the model renderer.
+     *
+     * Separate from the constructor because the models and their textures may
+     * not be there -- without them the sprites still draw, and the exit signs
+     * and key indicators are simply missing, which is what this port did before
+     * {@link PolyObj} existed.
+     */
+    public void setPoly(PolyObj p) {
+        this.poly = p;
+    }
+
+    /** {@code move.w Facing(a0),ObjAng}: which way a model has been turned. */
+    private int facingOf(GameObject o) {
+        int base = s.level.ptrObjects + o.index * ab3d.data.GameObject.SIZE;
+        if (!s.level.data.inRange(base, ab3d.data.GameObject.SIZE)) {
+            return 0;
+        }
+        return s.level.data.s16(base + Obj.FACING);
     }
 
     /** The three room parts, as {@code ObjDraw} selects between them. */
@@ -108,6 +131,15 @@ public final class ObjDraw {
                 break;                          // ble doneallinfront
             }
             GameObject o = objects.get(sortedIndex[i]);
+            // cmp.b #$ff,6(a0) / bne BitMapObj: a width scale of $ff is not a
+            // scale at all, it is the mark of a model
+            if (!o.isSprite()) {
+                if (poly != null && poly.draw(o, facingOf(o), ty3d, by3d)) {
+                    drawn++;
+                    pixelsWritten += poly.pixelsWritten;
+                }
+                continue;
+            }
             if (bitmap.draw(o, ty3d, by3d)) {
                 drawn++;
             }

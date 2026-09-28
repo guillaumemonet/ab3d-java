@@ -44,6 +44,8 @@ public final class Frame68k {
     private final StripDraw strip;
     private final FloorDraw floor;
     private final BitMapObj bitmap;
+    /** The model renderer, or null when this build has no models. */
+    public PolyObj poly;
     private final ObjDraw objects;
     private final GunDraw gun;
     private final Backdrop backdrop;
@@ -147,6 +149,14 @@ public final class Frame68k {
         this.floorTexture = FloorTexture.load(game);
         this.waterTexture = ab3d.data.WaterTexture.load(game);
         this.sine = SineTable.load(game);
+        try {
+            this.poly = new PolyObj(s, game, this.sine);
+            this.objects.setPoly(this.poly);
+        } catch (java.io.IOException e) {
+            // no models and no texture maps: the sprites still draw, and the
+            // exit signs and key indicators are simply not there
+            this.poly = null;
+        }
         this.shot = new PlayerShot(level, this.sine,
                                    ab3d.data.ColBox.load(game), this.gunData);
         this.alienControl = new AlienControl(level, this.sine);
@@ -361,6 +371,7 @@ public final class Frame68k {
         surfacesSeen = 0;
         objectsSeen = 0;
         rejects.clear();
+        s.angpos = angle & 8191;               // move.w d0,angpos
         wtan = (wtan + 640) & 8191;            // add.w #640,wtan / and.w #8191
         waterOff = (waterOff + 1) & 63;        // add.w #1,wateroff / and.w #63
         brightAnim.tick();                     // bsr brightanim, once a frame

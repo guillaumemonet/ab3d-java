@@ -41,6 +41,15 @@ public final class EngineState {
     public int yoff;
     /** {@code sinval} / {@code cosval}: the facing, as sine table words. */
     public int sinval, cosval;
+    /**
+     * {@code angpos}: the angle the viewer faces, as a byte offset.
+     *
+     * The wall and floor code works from {@link #sinval} and {@link #cosval} and
+     * never needs the angle itself, so this was not kept. The model renderer does
+     * need it: a model turns by its own facing less the viewer's, and that
+     * subtraction cannot be done on the sine alone.
+     */
+    public int angpos;
     /** {@code xwobble}: the horizontal shake added to every rotated point. */
     public int xwobble;
 
