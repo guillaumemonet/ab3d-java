@@ -146,6 +146,19 @@ public final class Ab3dGame extends SimpleApplication
      */
     private static final boolean TELL_HURT =
             "hurt".equals(System.getProperty("ab3d.tell"));
+
+    /**
+     * {@code -Dab3d.tell=door}: say what every press of the operate key meets.
+     *
+     * A door opens when the move into its wall is refused and the refusal sets
+     * {@code 14(a4)} on the wall's own line, which the door reads and clears in
+     * the same frame. Three separate things can stop that: standing in a
+     * different zone from the door, not actually being pushed into the wall, and
+     * the door wanting a condition bit that is not set. From inside the game
+     * they look identical, so this prints which it is.
+     */
+    private static final boolean TELL_DOOR =
+            "door".equals(System.getProperty("ab3d.tell"));
     private SineTable sine;
     private Framebuffer framebuffer;
 
@@ -408,6 +421,39 @@ public final class Ab3dGame extends SimpleApplication
         }
     }
 
+    /** What the doors of the player's zone look like at the moment of a press. */
+    private void tellDoors() {
+        int zone = player.camera.zone;
+        int found = 0;
+        for (ab3d.engine.Doors.Door d : frame.doors.doors) {
+            if (d.zone != zone) {
+                continue;
+            }
+            found++;
+            boolean flagged = false;
+            for (int[] w : d.walls) {
+                int line = w[0];
+                if (line >= 0 && line < level.floorLines.length
+                        && level.data.s16(level.floorLine(line).offset + 14) != 0) {
+                    flagged = true;
+                }
+            }
+            boolean satisfied = (d.conditions & frame.conditions) == d.conditions;
+            System.err.printf(
+                    "porte zone %d : declencheur $%x, veut conditions $%x, "
+                    + "on a $%x -> %s ; mur touche : %s ; hauteur %d (%d..%d)%n",
+                    d.zone, d.trigger, d.conditions, frame.conditions,
+                    satisfied ? "ouvrable" : "VERROUILLEE",
+                    flagged ? "oui" : "non",
+                    d.height, d.bottom, d.top);
+        }
+        if (found == 0) {
+            System.err.printf("aucune porte dans la zone %d (conditions $%x)%n",
+                              zone, frame.conditions);
+        }
+    }
+
+    /** {@code hitcol}: set for the frame the player is hurt in. */
     @Override
     public void simpleUpdate(float tpf) {
         if (shell.state != Shell.State.PLAY) {
@@ -436,6 +482,9 @@ public final class Ab3dGame extends SimpleApplication
         if (useTranscribed) {
             frame.lookBehind = keys.down(controls.key(Controls.Action.LOOK_BEHIND));
             frame.updateSwitches(1, player.camera.x, player.camera.z, spaceTapped);
+            if (TELL_DOOR && spaceTapped) {
+                tellDoors();
+            }
             frame.updateDoors(1, spaceTapped);
             frame.updateLifts(1, player.camera.zone, spaceTapped);
             frame.updateObjects(player.camera.zone, player.camera.x,
