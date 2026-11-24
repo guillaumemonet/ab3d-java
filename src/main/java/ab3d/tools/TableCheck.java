@@ -60,14 +60,19 @@ public final class TableCheck {
         int[] wb = new int[cb.count()];
         int[] ha = new int[ca.count()];
         int[] hb = new int[cb.count()];
+        int[] spa = new int[ca.count()];
+        int[] spb = new int[cb.count()];
         for (int i = 0; i < wa.length; i++) {
             wa[i] = ca.width(i);
             ha[i] = ca.height(i);
+            spa[i] = ca.span(i);
             wb[i] = cb.width(i);
             hb[i] = cb.height(i);
+            spb[i] = cb.span(i);
         }
         same("COL_WIDTH", wa, wb);
         same("COL_HEIGHT", ha, hb);
+        same("COL_SPAN", spa, spb);
 
         GunData ga = GunData.load(real);
         GunData gb = GunData.load(none);

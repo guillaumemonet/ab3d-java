@@ -15,7 +15,7 @@ public final class CondGateCheck {
 
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             int lockedHeld = 0, lockedOpened = 0, freeOpened = 0, freeStuck = 0;
 

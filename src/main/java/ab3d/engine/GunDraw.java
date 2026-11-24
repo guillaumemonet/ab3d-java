@@ -28,13 +28,6 @@ public final class GunDraw {
     /** {@code move.w #78,d3 / sub.w d7,d3}: the last row a column reaches. */
     private static final int LAST_ROW = 78;
 
-    /**
-     * {@code GUNYOFFS}: the row each weapon starts at.
-     *
-     * Two of them sit at the very top of the view rather than twenty rows down,
-     * which is what makes the shotgun and the grenade fill more of the screen.
-     */
-    private static final int[] Y_OFFSET = {20, 20, 0, 20, 20, 0, 0, 0};
 
     private final EngineState s;
     private final SpriteBank bank;
@@ -84,7 +77,10 @@ public final class GunDraw {
 
         // move.w (a1,d1.w*2),d5: the frame this step of the animation shows
         int step = steps[Math.floorMod(frame, steps.length)];
-        int yoff = Y_OFFSET[gun];                     // move.w (a1,d0.w*2),d7
+        // move.w (a1,d0.w*2),d7 -- GUNYOFFS, read from the source like the
+        // animations: a hand copy here once had the shotgun at row 0, twenty
+        // rows too high
+        int yoff = anims.yOffset(gun);
 
         // asl.w #2,d0 / add.w d5,d0 / move.w (a2,d0.w*4),d1
         SpriteBank.Frame f = bank.frame(SLOT, gun * 4 + step);

@@ -15,9 +15,12 @@ import java.nio.file.Files;
  * covering it -- and since the screen byte is read a few rows away, the amount of
  * displacement is what makes it ripple.
  *
- * {@code brightentab} is 8192 bytes: sixteen levels of 256 entries. The depth
- * picks a base level, the water word's high byte adds to it, and the screen byte
- * indexes within it.
+ * {@code brightentab} is the one the game executable carries, 11264 bytes of
+ * twelve-bit colour words: twenty-two levels of 256 entries (see
+ * {@link ShippedExe}; the source release's {@code brightenfile} is a byte table
+ * of a later build, and read as words it tints the water with garbage). The
+ * depth picks a base level, the water word's high byte adds to it, and the
+ * screen byte indexes within it.
  */
 public final class WaterTexture {
 

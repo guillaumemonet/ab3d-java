@@ -66,6 +66,21 @@ public final class MoveObject {
      * had and gets back what it has.
      */
     public boolean stoodInTop;
+    /**
+     * {@code RoomPath}: the rooms entered, in order, by the last move -- one
+     * entry each time a floor line is crossed. Only {@code FindCloseRoom}
+     * reads it.
+     */
+    public final java.util.List<Integer> roomPath = new java.util.ArrayList<>();
+    /**
+     * {@code exitfirst}: stop at the first wall rather than slide along it.
+     *
+     * The original then works out where on the wall the move met it
+     * ({@code .calcwherehit}); here the slid point of that pass is kept and no
+     * further room is entered, which is what {@code FindCloseRoom} needs of it
+     * -- the rooms a probe passes through before something stops it.
+     */
+    public boolean exitFirst;
     /** Passes the resolution took, for checking it settles. */
     public int passes;
     /** Where lines beyond the point went: height let it through, segment missed, slid. */
@@ -121,6 +136,7 @@ public final class MoveObject {
         zone = fromZone;
         hitWall = false;
         passes = 0;
+        roomPath.clear();
 
         // tst.w xdiff / tst.w zdiff / rts
         if (newX == oldX && newZ == oldZ) {
@@ -236,12 +252,17 @@ public final class MoveObject {
             // into a new room -- the wall pass over one room runs once. Repeating
             // it while anything moved makes the slides chase each other instead
             // of settling, and the point drifts out of the room entirely.
+            if (exitFirst && hitWall) {
+                settle(fromZone, oldX, oldZ);
+                return;
+            }
             int next = crossedInto(zone, oldX, oldZ);
             if (next == zone) {
                 settle(fromZone, oldX, oldZ);
                 return;
             }
             zone = next;
+            roomPath.add(next);                  // move.w (a3),(a0)+
         }
         settle(fromZone, oldX, oldZ);
     }

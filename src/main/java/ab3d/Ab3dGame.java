@@ -21,6 +21,7 @@ import ab3d.render.PortalRenderer;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.font.BitmapText;
+import ab3d.game.GpuCheck;
 import com.jme3.input.KeyInput;
 import com.jme3.input.RawInputListener;
 import com.jme3.input.event.JoyAxisEvent;
@@ -95,8 +96,6 @@ public final class Ab3dGame extends SimpleApplication
     /** Height of the debug line drawn under everything else. */
     private static final int STATUS_HEIGHT = 24;
 
-    private static final int WALK_SPEED = 260;   // level units per second
-    private static final int TURN_SPEED = 1400;  // sine-table steps per second
 
     private static int resolution() {
         return Math.max(1, Math.min(8, Integer.getInteger("ab3d.res", 1)));
@@ -184,6 +183,54 @@ public final class Ab3dGame extends SimpleApplication
     /** {@code PLR1_fire} and {@code PLR1_clicked}, from PLR1CONTROL.s. */
     private boolean oldFire;
 
+    /**
+     * Says which card the window is on, and asks before carrying on with an
+     * integrated one when the machine has another -- see {@link GpuCheck}.
+     */
+    private void checkGpu() {
+        String gl;
+        try {
+            gl = org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_RENDERER);
+        } catch (Throwable t) {
+            gl = "inconnu (" + t.getClass().getSimpleName() + ")";
+        }
+        java.util.List<String> cards = GpuCheck.adapters();
+        String warn = GpuCheck.report(gl, cards);
+        if (warn == null) {
+            return;
+        }
+        BitmapText red = new BitmapText(guiFont);
+        red.setSize(16);
+        red.setColor(com.jme3.math.ColorRGBA.Red);
+        red.setText(warn + '\n' + GpuCheck.FIX);
+        red.setLocalTranslation(6, settings.getHeight() - 6, 1);
+        guiNode.attachChild(red);
+        // -Dab3d.gpu=ok: the warning stays, the question is not asked -- for a
+        // run nobody is watching, or a player who has heard it already
+        if (!"ok".equals(System.getProperty("ab3d.gpu"))
+                && cards.stream().anyMatch(c -> !GpuCheck.looksIntegrated(c))) {
+            // Asked on Swing's own thread, not this one. Blocking the GL thread
+            // on a modal dialog stops the game window answering Windows, which
+            // then calls it hung -- and closing it kills the process outright.
+            String text = String.join("\n", warn, "", GpuCheck.FIX, "",
+                                      "Continuer quand meme sur la carte integree ?");
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                javax.swing.JOptionPane pane = new javax.swing.JOptionPane(text,
+                        javax.swing.JOptionPane.WARNING_MESSAGE,
+                        javax.swing.JOptionPane.YES_NO_OPTION);
+                javax.swing.JDialog d = pane.createDialog("Carte graphique");
+                d.setAlwaysOnTop(true);      // never lost behind the game window
+                d.setVisible(true);
+                d.dispose();
+                Object v = pane.getValue();
+                if (!(v instanceof Integer i) || i != javax.swing.JOptionPane.YES_OPTION) {
+                    System.err.println("Arret a la demande : " + GpuCheck.FIX);
+                    stop();
+                }
+            });
+        }
+    }
+
     public static void main(String[] args) {
         // Where the game's own files are. A checkout says so on the command
         // line; a packaged copy asks once and writes the answer down.
@@ -216,6 +263,7 @@ public final class Ab3dGame extends SimpleApplication
 
     @Override
     public void simpleInitApp() {
+        checkGpu();
         framebuffer = new Framebuffer(resolution());
         try {
             GameData game = GameData.fromSystemProperty();
@@ -238,6 +286,9 @@ public final class Ab3dGame extends SimpleApplication
                         FloorTexture.load(game), new SpriteBank(game), framebuffer);
             }
             player = new Player(level);
+            if (frame != null) {
+                player.collision = frame.collision;
+            }
         } catch (Exception e) {
             throw new RuntimeException("Could not load the original AB3D data. "
                     + "Point -Dab3d.root at the ab3d-rtg checkout and -Dab3d.disk at "
@@ -415,6 +466,7 @@ public final class Ab3dGame extends SimpleApplication
             if (useTranscribed) {
                 frame = new Frame68k(level, game);
                 frame.setSound(noise);
+                player.collision = frame.collision;
             }
         } catch (Exception e) {
             // not on this disk; the menu keeps naming it, nothing else changes
@@ -465,7 +517,12 @@ public final class Ab3dGame extends SimpleApplication
                         ? "" : "cursors to choose, space or return to select");
             return;
         }
-        update(tpf);
+        // TempFrames: how many vertical blanks the controls ran this frame.
+        // None means the screen is redrawn and nothing else happens -- the
+        // original's main loop cannot outrun the vertical blank, so every frame
+        // of its own has at least one, and a door needs the player to have
+        // moved in the frame the key is tapped
+        int ticks = update(tpf);
 
         // PLR1_alwayskeys: the operate key counts once per press, not per frame
         boolean operate = keys.down(controls.key(Controls.Action.OPERATE));
@@ -474,26 +531,25 @@ public final class Ab3dGame extends SimpleApplication
         }
         oldSpace = operate;
 
-        // PLR1CONTROL.s: fire is the key held, clicked is the frame it went down
-        boolean fire = keys.down(controls.key(Controls.Action.FIRE));
-        boolean clicked = fire && !oldFire;
-        oldFire = fire;
-
-        if (useTranscribed) {
+        if (useTranscribed && ticks > 0) {
+            // PLR1CONTROL.s: fire is the key held, clicked is the frame it went down
+            boolean fire = keys.down(controls.key(Controls.Action.FIRE));
+            boolean clicked = fire && !oldFire;
+            oldFire = fire;
             frame.lookBehind = keys.down(controls.key(Controls.Action.LOOK_BEHIND));
-            frame.updateSwitches(1, player.camera.x, player.camera.z, spaceTapped);
+            frame.updateSwitches(ticks, player.camera.x, player.camera.z, spaceTapped);
             if (TELL_DOOR && spaceTapped) {
                 tellDoors();
             }
-            frame.updateDoors(1, spaceTapped);
-            frame.updateLifts(1, player.camera.zone, spaceTapped);
+            frame.updateDoors(ticks, spaceTapped);
+            frame.updateLifts(ticks, player.camera.zone, spaceTapped);
             frame.updateObjects(player.camera.zone, player.camera.x,
                                 player.camera.z, player.camera.yoff,
-                                player.stoodInTop, 1, player.camera.angle);
+                                player.stoodInTop, ticks, player.camera.angle);
             frame.armObjects(player.camera.zone);
             // Player1Shot is the first thing objmoveanim does, but the aim it
             // reads is worked out from the frame just drawn
-            frame.firePlayer(fire, clicked, 1, player.camera.x, player.camera.z,
+            frame.firePlayer(fire, clicked, ticks, player.camera.x, player.camera.z,
                              player.camera.yoff, Player.EYE_HEIGHT,
                              player.camera.angle, player.camera.zone,
                              player.stoodInTop);
@@ -524,8 +580,10 @@ public final class Ab3dGame extends SimpleApplication
                 playJingle(won ? "welldone" : "gameover");
             }
             spaceTapped = false;
-            frame.render(player.camera.zone, player.camera.x, player.camera.z,
-                         player.camera.yoff, player.camera.angle);
+        }
+        if (useTranscribed) {
+            int[] e = eye();
+            frame.render(player.camera.zone, e[0], e[1], e[2], e[3]);
             toRgba(frame.state(), rgba);
         } else {
             renderer.render(framebuffer, player.camera);
@@ -708,8 +766,7 @@ public final class Ab3dGame extends SimpleApplication
      * and the turn keys are set to two hundred and fifty-five -- a code no key
      * has, so turning simply stops rather than being tested for.
      */
-    private void update(float tpf) {
-        player.tick();
+    private int update(float tpf) {
 
         int left = controls.key(Controls.Action.TURN_LEFT);
         int right = controls.key(Controls.Action.TURN_RIGHT);
@@ -722,44 +779,67 @@ public final class Ab3dGame extends SimpleApplication
             right = 255;
         }
 
-        int turn = 0;
-        if (keys.down(left)) {
-            turn -= 1;
-        }
-        if (keys.down(right)) {
-            turn += 1;
-        }
-        if (turn != 0) {
-            player.turn(Math.round(turn * TURN_SPEED * tpf));
-        }
-
-        int fwd = 0, side = 0;
-        if (keys.down(controls.key(Controls.Action.FORWARD))) {
-            fwd += 1;
-        }
-        if (keys.down(controls.key(Controls.Action.BACKWARD))) {
-            fwd -= 1;
-        }
-        if (keys.down(stepRight)) {
-            side += 1;
-        }
-        if (keys.down(stepLeft)) {
-            side -= 1;
-        }
-        if (fwd == 0 && side == 0) {
-            return;
-        }
-
+        // The keys are read in the vertical blank, fifty times a second, and
+        // the main loop takes whatever has built up: so a fast machine moves
+        // the player no faster, only more smoothly. Five ticks at most, so a
+        // stall does not come back as a lurch.
+        tickTime = Math.min(tickTime + tpf * VBLANK_HZ, MAX_TICKS);
+        boolean fwd = keys.down(controls.key(Controls.Action.FORWARD));
+        boolean back = keys.down(controls.key(Controls.Action.BACKWARD));
         boolean running = keys.down(controls.key(Controls.Action.RUN));
-        float speed = WALK_SPEED * tpf * (running ? 2f : 1f);
-        // PLR1_clumptime: the footsteps, which the forward speed drives
-        if (noise != null && fwd != 0) {
-            player.clump(fwd * (running ? 50 : 25), noise);
+        int ticks = 0;
+        while (tickTime >= 1f) {
+            tickTime -= 1f;
+            ticks++;
+            // where the eye was before this tick, for drawing between ticks
+            prevX = player.camera.x;
+            prevZ = player.camera.z;
+            prevAngle = player.camera.angle;
+            prevYoff = player.camera.yoff;
+            prevZone = player.camera.zone;
+            player.tick();                          // PLR1_alwayskeys
+            player.controlTick(sine, fwd, back, keys.down(left), keys.down(right),
+                               keys.down(stepLeft), keys.down(stepRight),
+                               running, noise);
+            // the move through the walls once a tick: what the original does
+            // when its main loop keeps up with the vertical blank
+            player.applyMove();
         }
-        double sin = player.camera.sin(sine) / 32768.0;
-        double cos = player.camera.cos(sine) / 32768.0;
-        double dx = (fwd * sin + side * cos) * speed;
-        double dz = (fwd * cos - side * sin) * speed;
-        player.move((int) Math.round(dx), (int) Math.round(dz));
+        return ticks;
     }
+
+    /** The eye as it stood before the last tick. */
+    private int prevX, prevZ, prevAngle, prevYoff, prevZone = -1;
+
+    /**
+     * The eye to draw from: between the last two ticks, by how far into the
+     * next one this frame falls.
+     *
+     * The game moves fifty times a second and the screen refreshes sixty, so
+     * drawing only where the last tick left the player shows one frame in six
+     * unmoved -- a stutter that reads as the game being slow. This is display
+     * only; everything that decides anything uses the tick positions. Across
+     * a change of room it draws the tick position itself, since a point
+     * between two rooms may lie in neither.
+     */
+    private int[] eye() {
+        ab3d.game.Camera c = player.camera;
+        if (prevZone != c.zone) {
+            return new int[]{c.x, c.z, c.yoff, c.angle};
+        }
+        float t = Math.max(0f, Math.min(1f, tickTime));
+        int da = ((c.angle - prevAngle + 2048) & 4095) - 2048;
+        return new int[]{
+            Math.round(prevX + (c.x - prevX) * t),
+            Math.round(prevZ + (c.z - prevZ) * t),
+            Math.round(prevYoff + (c.yoff - prevYoff) * t),
+            (prevAngle + Math.round(da * t)) & 4095,
+        };
+    }
+
+    /** The PAL vertical blank, which {@code PLR1_keyboard_control} runs in. */
+    private static final float VBLANK_HZ = 50f;
+    private static final float MAX_TICKS = 5f;
+    /** Ticks of the vertical blank owed to the controls. */
+    private float tickTime;
 }

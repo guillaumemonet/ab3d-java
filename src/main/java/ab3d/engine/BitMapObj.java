@@ -331,9 +331,12 @@ public final class BitMapObj {
             }
             rowsFetched++;
             int pixel = sheet.pixel(column, M68k.w(d1));
-            if (pixel != SpriteSheet.TRANSPARENT
-                    && screen >= 0 && screen < s.screen.length) {
-                s.screen[screen] = (short) sheet.colour(shade, pixel);
+            int colour = pixel == SpriteSheet.TRANSPARENT ? -1
+                         : sheet.colour(shade, pixel);
+            // -1 is "no colour for this", not a colour: written as it stood it
+            // was $fff, and a sheet without its palette drew solid white
+            if (colour >= 0 && screen >= 0 && screen < s.screen.length) {
+                s.screen[screen] = (short) colour;
                 pixelsWritten++;
             }
             screen += EngineState.ROW_WORDS;   // adda.w #104*4,a6

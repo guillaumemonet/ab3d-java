@@ -18,7 +18,7 @@ public final class ExitListCheck {
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
         for (String name : args.length > 0 ? args
-                : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+                : Levels.all()) {
             Level lv = Level.load(game, name);
             BinReader r = lv.data;
             int zonesWithMore = 0, shortTotal = 0, longTotal = 0, worst = 0;

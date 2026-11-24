@@ -20,7 +20,7 @@ public final class FloorSizeCheck {
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
         String[] levels = args.length > 0 ? args
-                : new String[] { "level_a", "level_b", "level_c", "level_d" };
+                : Levels.all();
 
         for (String name : levels) {
             Level lv = Level.load(game, name);

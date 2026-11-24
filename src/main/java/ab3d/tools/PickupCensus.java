@@ -37,7 +37,7 @@ public final class PickupCensus {
         int passes = 0, healOk = 0, ammoOk = 0, gunOk = 0;
         int tookMedikits = 0, tookClips = 0, tookGuns = 0;
 
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             int[] count = new int[32];
             for (int i = 0; i < lv.objects.size(); i++) {

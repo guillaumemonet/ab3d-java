@@ -20,9 +20,9 @@ quelles à l'exécution — aucune conversion hors ligne.
 Écran-titre en fondu, menu avec mot de passe et reconfiguration des touches,
 rendu logiciel complet (murs, sols, plafonds, sprites, arme en main, fond de
 ciel, eau), bandeau et jauges, portes, ascenseurs, interrupteurs, clés et
-conditions, ramassages, cinq types d'ennemis qui rôdent, repèrent, poursuivent,
-mordent et tirent, six armes dont trois à projectiles, explosions avec souffle
-et éclats, barils, le son, la fin de niveau avec son mot de passe, et le
+conditions, ramassages, tous les ennemis que posent les seize niveaux — qui
+rôdent, repèrent, poursuivent, mordent, tirent, sèment ou crachent du feu —, six
+armes dont trois à projectiles, explosions avec souffle et éclats, barils, le son, la fin de niveau avec son mot de passe, et le
 lecteur de modules ProTracker.
 
 Un niveau se termine quand le joueur entre dans une salle précise — `ENDZONES`
@@ -91,6 +91,15 @@ reconfigurables depuis **CONTROL OPTIONS**.
 | `D` | s'accroupir |
 | `L` | regarder derrière |
 | `1`–`5` | fusil à impulsion, à pompe, plasma, grenades, roquettes |
+
+Le joueur a l'inertie de l'original : `PLR1_keyboard_control` tourne dans
+l'interruption verticale, cinquante fois par seconde, où les touches poussent
+une vitesse qui perd un huitième d'elle-même à chaque tic — on accélère, on
+glisse, on tourne avec du jeu. La boucle principale prend ce qui s'est
+accumulé et le fait passer dans les murs ; une image sans tic ne fait que
+redessiner, et les autres donnent leur nombre de tics comme `TempFrames`. Une
+porte s'ouvre quand on tape Espace pendant que le joueur la touche, c'est-à-dire
+en marchant dedans ou dans le court élan qui suit.
 
 Pour changer de niveau, **PASSWORD** dans le menu. Les disquettes portent les
 **seize** niveaux, et tous se chargent :
@@ -164,10 +173,46 @@ douze concordent. Les huit listes d'animation d'armes font chacune exactement un
 de plus que le compte annoncé ailleurs dans la table. Vingt-sept des vingt-huit
 échantillons ont la longueur que la table leur donne.
 
-Le même travail a servi à savoir quoi **ne pas** porter : sur les douze types
-d'ennemis, six ne sont posés dans aucun niveau ; il n'y a aucun mur transparent
-dans les quatre niveaux ; le visage animé du bandeau a ses données commentées et
-sa routine jamais appelée.
+Le même travail a servi à savoir quoi **ne pas** porter : il n'y a aucun mur
+transparent dans les seize niveaux ; le visage animé du bandeau a ses données
+commentées et sa routine jamais appelée.
+
+Il a aussi servi à se tromper, et c'est instructif. Le recensement des ennemis
+ne regardait que les quatre premiers niveaux, et concluait que six types sur
+douze n'étaient posés nulle part. Sur les seize, `EnemyCensus` en trouve
+onze : 49 vers, 34 conduites de gaz, 10 arbres, un robot (niveau 8) et la
+grosse chose rouge, seule, au bout du niveau 16. Seul l'œil n'est jamais posé —
+ce sont les arbres qui le sèment.
+
+Les contrôles de `tools/` prennent donc désormais par défaut tous les niveaux
+des disquettes (`Levels.all()`). Repassés sur les seize, ils tiennent : aucun
+point ne sort de sa salle, les 40 clés se ramassent et ouvrent chacune une
+porte, chaque condition qu'une porte attend sans qu'un interrupteur la donne est
+un bit de clé — le niveau 16 attend le bit 3, et c'est la grosse chose rouge
+qui le donne en mourant. Trois contrôles se trompaient eux-mêmes et ont été
+corrigés : l'un mettait toujours le joueur au rez-de-chaussée (une clé du
+niveau 8 est à l'étage), un autre ignorait l'armure des nouveaux ennemis, le
+troisième lisait la taille d'un enregistrement de sol avant qu'elle soit
+renseignée. Une seule bizarrerie vient des données : au niveau 12, dix listes
+de découpage nomment le point 0, que la salle ne fait pas tourner — l'original
+lit alors une position restée de l'image précédente, et le portage aussi.
+
+### Les ennemis des niveaux 5 à 16
+
+| type | fichier | ce qu'il fait |
+| --- | --- | --- |
+| 13 ver | `halfworm.s` | se tourne vers le joueur sans bouger, quatre tirs de plasma depuis sa gueule (`SHOTOFFMULT` 700), une armure qui divise chaque coup par quatre ; laisse toujours son corps |
+| 16 arbre | `tree.s` | ne tire pas : prend un enregistrement libre de `OtherNastyData` et y fait naître un œil ; les coups de moins de quatre ne comptent pas mais s'additionnent ; disparaît à sa mort |
+| 17 œil | `EyeBall.s` | `FlyingScalyBall.s` dessiné depuis la planche de l'arbre ; éclate en dix morceaux quoi qu'il arrive |
+| 14 grosse chose rouge | `bigredthing.s` | roquettes deux par deux depuis son bras ; tuée, elle **devient une clé** (condition bit 3) dans son propre enregistrement |
+| 20 conduite de gaz | `anims` | ni vue ni blessable : cinq bouffées de flamme à dix images d'écart, puis le repos que `ObjTimer` donne à chaque conduite |
+| 6 robot | `robot.s` | un modèle 3D qui garde un cap et braque vers lui, grenades par deux face au joueur, armure de quatre bits ; explose et devient une clé |
+
+`OtherNastyData` est une troisième réserve de vingt enregistrements que l'en-tête
+du niveau ne nomme pas : `jg.s` la trouve par `add.l #64*20,a2` après les tirs
+ennemis. `PoolProbe` montre qu'elle est, dans les seize niveaux, à l'intérieur de
+la liste d'objets, juste avant les deux joueurs. `NewEnemyCheck` fait vivre
+chacun de ces types devant le joueur et vérifie ce qu'il laisse en mourant.
 
 ## Les bizarreries de l'original, gardées et signalées
 
@@ -186,24 +231,93 @@ Le code note ce qu'il trouve plutôt que de le lisser.
   jingles de fin de niveau ne sont pas conditionnés, et sont donc la seule
   musique que ce build joue.
 
+## Ce que le jeu montrait de travers, et pourquoi
+
+Une partie jouée de bout en bout a montré quatre défauts que les contrôles ne
+voyaient pas. `FlickerHunt` fait maintenant marcher le joueur dans un niveau et
+signale les images qui jurent avec leurs voisines.
+
+- **Les murs vus de biais en peigne.** `CalcAndDraw` lit la luminosité d'une
+  extrémité par `sub.w #300,d5 / ext.w d5` : l'octet bas seulement. La
+  subdivision fait la moyenne de la colonne de texture et de la luminosité en
+  un seul mot long, si bien qu'une somme de colonnes impaire laisse tomber son
+  bit dans le bit quinze de la luminosité ; le `ext.w` le jette. Le portage
+  avait la soustraction sans le `ext.w`, et le dégradé faisait le tour du
+  nuancier toutes les deux ou trois colonnes.
+- **L'écran qui disparaît une image.** Un point presque à la hauteur de l'œil
+  et loin sur le côté fait déborder `divs` ; le 68000 laisse alors le dividende
+  tel quel, la colonne devient un reste sans rapport, et le mur qui y touche est
+  jeté entier. **L'original le fait aussi** ; le portage pousse désormais la
+  colonne du côté où est le point (`Renderer68k.CLAMP_OVERFLOW`).
+- **Les barils blancs.** `BARREL.pal` s'appelle `barrel.pal-0` dans l'arbre
+  source, et une couleur absente s'écrivait `$fff`.
+- **Les ennemis qui ne meurent pas.** `Collision` n'était pas portée : rien ne
+  tenait un alien à distance, et à moins de quatre-vingts unités la visée
+  l'écarte (l'écart de hauteur sur quarante-quatre dépasse le double de la
+  distance). Il venait mordre là où on ne pouvait pas le toucher. Avec
+  `Collision`, une salle de quatre aliens tombe en douze tirs, tous au but, au
+  lieu de quatre-vingts tirs pour deux touches. Les ennemis prenaient aussi
+  leurs marches avec la hauteur du joueur au lieu de la leur.
+
+- **Des murs aux mauvaises textures, un peu partout.** La table des textures
+  de murs n'était connue que pour ses six premières entrées, celles que
+  `master.s` déclare ; les suivantes avaient été devinées d'après les fichiers
+  assez grands pour les bandes que les niveaux demandent. Or `jg.s` inclut
+  `wallchunk.s`, qui donne la liste entière : quatre devinettes étaient fausses
+  (6, 8, 9 et 13), et une texture de la mauvaise taille sort en bouillie.
+- **Le mouvement saccadé.** Le jeu avance cinquante fois par seconde, l'écran
+  en affiche soixante : une image sur six ne bougeait pas. L'affichage place
+  maintenant l'œil entre les deux derniers tics ; tout ce qui décide de quelque
+  chose garde les positions des tics.
+- **Le rectangle rayé multicolore (indicateurs de clé), l'eau, le menu.**
+  L'exécutable de la disquette un, `abd.pk`, comparé octet par octet aux
+  sources une fois décompressé, contient les mêmes modèles et presque les mêmes
+  tables, sauf trois : `Texturemaps` (les textures des objets 3D ; celle des
+  sources est une version antérieure, bruitée, et le boîtier des indicateurs y
+  est une bouillie rayée), `brightentab` (le jeu a celle que les sources
+  appellent `oldbrightenfile`, des couleurs douze bits ; `brightenfile` est une
+  table d'octets d'une autre version, et lue en mots elle teintait l'eau
+  n'importe comment) et `optcop` (le texte du menu est doré dans le jeu, gris
+  dans les sources). `data/ShippedExe` transcrit le décompresseur de
+  l'exécutable et y lit ces trois tables ; `tools/ShippedExeCheck` vérifie que
+  leurs voisines sont bien identiques aux fichiers des sources, ce qui garantit
+  les adresses. Sans la disquette, le portage retombe sur les sources et le dit.
+- **Les objets 3D qui flottent, le fusil à pompe trop haut.** Le centre
+  horizontal d'un modèle se lit dans `ObjRotated` au long de l'octet quatre (x
+  déjà multiplié par 128) ; le portage prenait le mot de l'octet zéro (x brut),
+  si bien que chaque modèle se dessinait presque au milieu de la vue au lieu
+  d'être sur son mur. Et `GUNYOFFS` avait été recopié avec un zéro pour le
+  fusil à pompe au lieu de vingt : il est désormais lu dans `jg.s`.
+
+Et deux tremblements venaient du glissement contre les murs : pressé dans un
+coin, le joueur était renvoyé en arrière une image sur deux. Un déplacement qui
+finit derrière son point de départ est désormais refusé
+(`Player.REFUSE_BACKSLIDE`), comme l'est déjà celui qui sort de toute salle.
+
 ## Ce qui manque
 
-Le mode deux joueurs, et les six types d'ennemis que les niveaux ne posent
-jamais — robot, ver, grosse chose rouge, arbre, œil, conduite de gaz.
+Le mode deux joueurs, et le grand alien laid (`BigUglyAlien.s`), inclus mais
+qu'aucun type ne fait appeler.
 
-Deux écarts assumés subsistent dans le moteur, tous deux commentés à l'endroit
+Trois écarts assumés subsistent dans le moteur, tous commentés à l'endroit
 où ils sont : un refus de déplacement qui n'existe pas dans l'original, parce que
-le glissement transcrit laisse un résidu que le sien n'a pas ; et la teinte de
-l'eau, dont la table n'a jamais été convertie pour cette version du moteur.
+le glissement transcrit laisse un résidu que le sien n'a pas ; le ver, l'arbre et la grosse chose rouge qui, en attaquant, gardent la salle où
+ils sont — l'original appelle `MoveObject`, remet l'ancienne position, mais
+garde la salle d'arrivée ; et `FindCloseRoom` (`CloseRoom`), qui choisit dans
+quelle salle dessiner un grand sprite à cheval sur deux, et qui lance sa seconde
+sonde depuis la salle de la créature et non depuis celle où la première s'est
+arrêtée, et l'arrêt au premier mur garde le point glissé plutôt que de
+calculer le point d'impact.
 
 ## Licence
 
 Le code de ce dépôt est publié tel quel.
 
 `src/main/resources/ab3d/includes/` contient 307 Ko de données d'origine de
-**Team17** : les vingt-deux fichiers que l'exécutable Amiga avait compilés
-dedans et qui ne sont sur aucune disquette. Sans eux le portage ne compile ni ne
-tourne, et aucune règle ne les reproduit. Ils restent la propriété de leurs
+**Team17**, tirées des sources publiées : les tables que l'exécutable Amiga avait
+compilées dedans. Le portage ne s'en sert plus qu'en secours : il lit ces tables
+dans l'exécutable de la disquette un (`abd.pk`, voir `data/ShippedExe`), car
+trois d'entre elles n'existent dans les sources que dans une autre version. Ils restent la propriété de leurs
 ayants droit, comme tout le reste du contenu du jeu.
 
 Les niveaux, les sons, les sprites et les textures ne sont **pas** dans ce

@@ -144,6 +144,19 @@ public final class GameData {
      * @throws IOException when none of the three has it
      */
     public byte[] bytes(String name) throws IOException {
+        if (ShippedExe.provides(name)) {
+            ShippedExe exe = shippedExe();
+            if (exe != null) {
+                return exe.table(name);
+            }
+            if (!warnedNoExe) {
+                warnedNoExe = true;
+                System.err.println("ATTENTION : abd.pk introuvable ou inconnu sur le disque 1 ; "
+                                   + "les tables compilées dans le jeu viennent des sources, "
+                                   + "dont trois n'ont pas la version livrée (textures des "
+                                   + "objets 3D, teinte de l'eau, couleurs du menu).");
+            }
+        }
         Path p = include(name);
         if (Files.isRegularFile(p)) {
             return Files.readAllBytes(p);
@@ -155,6 +168,27 @@ public final class GameData {
         }
         throw new IOException("no '" + name + "' on the disks, under " + root
                               + ", or in this build");
+    }
+
+    private ShippedExe exe;
+    private boolean exeTried, warnedNoExe;
+
+    /** Disk one's executable, decrunched once, or null without it. */
+    public synchronized ShippedExe shippedExe() {
+        if (!exeTried) {
+            exeTried = true;
+            if (disk != null) {
+                Path p = lookup(disk.resolve("disk1"), "abd.pk");
+                if (p != null) {
+                    try {
+                        exe = ShippedExe.load(p);
+                    } catch (IOException | RuntimeException e) {
+                        exe = null;
+                    }
+                }
+            }
+        }
+        return exe;
     }
 
     /**
@@ -183,7 +217,8 @@ public final class GameData {
 
     /** Whether {@link #bytes} would find it, without reading it. */
     public boolean has(String name) {
-        return Files.isRegularFile(include(name))
+        return (ShippedExe.provides(name) && shippedExe() != null)
+               || Files.isRegularFile(include(name))
                || GameData.class.getResource("/ab3d/includes/" + name) != null;
     }
 

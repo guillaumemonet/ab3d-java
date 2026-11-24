@@ -84,7 +84,7 @@ public final class SpriteSheet {
      * be written down, and are.
      */
     private static byte[] palette(GameData game, String name) throws IOException {
-        Path pal = game.include(name + ".pal");
+        Path pal = paletteFile(game, name);
         if (Files.isRegularFile(pal)) {
             return SbDepacker.unpack(Files.readAllBytes(pal));
         }
@@ -96,6 +96,27 @@ public final class SpriteSheet {
             }
         }
         return null;
+    }
+
+    /**
+     * The sheet's {@code .pal} in the source tree.
+     *
+     * ObjDraw3.chipram assembles {@code incbin "BARREL.pal"}, and the tree has
+     * no file of that name -- only {@code barrel.pal-0}, the same 960 bytes a
+     * palette has: a grey ramp of fourteen colours whose darker rows follow
+     * the shading rule to the last component, for a sheet that uses colours
+     * one to fourteen and no others. Without it every barrel pixel came out
+     * as the -1 of "no palette", which the screen shows as white.
+     */
+    public static Path paletteFile(GameData game, String name) {
+        Path pal = game.include(name + ".pal");
+        if (!Files.isRegularFile(pal)) {
+            Path alt = game.include(name + ".pal-0");
+            if (Files.isRegularFile(alt)) {
+                return alt;
+            }
+        }
+        return pal;
     }
 
     /** Number of entries in the pointer table. */

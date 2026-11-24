@@ -45,7 +45,7 @@ public final class GameObject {
      * was already refreshing.
      */
     public int height;
-    public final int widthScale, heightScale;
+    public int widthScale, heightScale;
     public int slot, frame;
     /**
      * True when the word at offset 12 is negative.

@@ -18,7 +18,7 @@ public final class CondCheck {
 
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             Frame68k f = new Frame68k(lv, game);
             int doorsCond = 0, liftsCond = 0;

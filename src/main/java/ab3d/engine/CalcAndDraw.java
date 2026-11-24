@@ -129,8 +129,15 @@ public final class CalcAndDraw {
                 st.rightTexColumn = d5;
                 st.leftDepth = d0;
                 st.rightDepth = d2;
-                st.leftBright = M68k.w(lbr - BRIGHT_BIAS);
-                st.rightBright = M68k.w(pts.bright(a1) - BRIGHT_BIAS);
+                // sub.w #300,d5 / ext.w d5: only the low byte, signed. The
+                // subdivision averages column and brightness as one longword,
+                // so an odd column sum drops its low bit into bit fifteen of
+                // the brightness; the ext.w is what throws that away. Keeping
+                // the whole word turned the Gouraud ramp into a sweep of the
+                // whole shade table every few columns -- walls seen at a slant
+                // came out as a comb of black and bright stripes.
+                st.leftBright = M68k.w(M68k.extW(M68k.w(lbr - BRIGHT_BIAS)));
+                st.rightBright = M68k.w(M68k.extW(M68k.w(pts.bright(a1) - BRIGHT_BIAS)));
                 strips.add(st);
             }
 

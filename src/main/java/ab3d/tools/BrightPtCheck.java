@@ -9,7 +9,7 @@ public final class BrightPtCheck {
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
         for (String name : args.length > 0 ? args
-                : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+                : Levels.all()) {
             Level lv = Level.load(game, name);
             int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
             int ulo = Integer.MAX_VALUE, uhi = Integer.MIN_VALUE, nonzero = 0;

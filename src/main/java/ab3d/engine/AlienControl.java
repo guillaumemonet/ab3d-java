@@ -13,9 +13,11 @@ import ab3d.m68k.M68k;
  * nine hundred lines each, which are near-copies of one another, and keeps for
  * itself the handful of things they all call. Those are what is here.
  *
- * Six of the eleven are never placed in any shipped level -- the robot, the
- * worm, the big red thing, the tree, the eyeball and the gas pipe -- so about
- * four and a half thousand lines of that total are dead weight in this build.
+ * All but one are placed somewhere. The first four levels place only the
+ * alien, the flying alien, the three marines and the barrel; the twelve after
+ * them add the worm, the tree, the gas pipe, the robot and the big red thing.
+ * The eyeball is never placed -- the trees sow it -- and the big ugly alien is
+ * included but has no type that dispatches to it.
  */
 public final class AlienControl {
 

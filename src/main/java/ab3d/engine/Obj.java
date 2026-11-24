@@ -23,6 +23,11 @@ public final class Obj {
     public static final int BRIGHT = 2;
     /** Height above the zone's floor, in units the engine scales by 128. */
     public static final int HEIGHT = 4;
+    /**
+     * The width and height the sprite is drawn at in the world, a byte each.
+     * {@code $ff} in the first marks a polygon object instead.
+     */
+    public static final int SCALE = 6;
     /** The graphic slot, and the frame within it. */
     public static final int SLOT = 8, FRAME = 10;
     /** The zone it is in play in, or -1. {@code GraphicRoom} follows it. */

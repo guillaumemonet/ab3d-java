@@ -22,7 +22,7 @@ public final class CoverCheck {
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
         for (String name : args.length > 0 ? args
-                : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+                : Levels.all()) {
             Level lv = Level.load(game, name);
             BinReader g = lv.graphics.data;
             int zonesShort = 0, missingTotal = 0, checkedZones = 0;

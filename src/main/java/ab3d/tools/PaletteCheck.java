@@ -13,7 +13,9 @@ public final class PaletteCheck {
         GameData game = GameData.fromSystemProperty();
         check(game.root().resolve("includes/walls/pipes.wad"), 2048, "a wall palette");
         check(game.root().resolve("includes/floorpalscaled"), -1, "floorpalscaled");
-        check(game.root().resolve("includes/brightenfile"), -1, "brightenfile");
+        // the one the game uses: from disk one's executable (see ShippedExe)
+        check(game.bytes("brightenfile"), -1, "brightentab (jeu)");
+        check(game.root().resolve("includes/brightenfile"), -1, "brightenfile (src)");
         check(game.root().resolve("includes/darkenedcols"), -1, "darkenedcols");
     }
 
@@ -22,7 +24,11 @@ public final class PaletteCheck {
             System.out.printf("%-18s missing%n", what);
             return;
         }
-        byte[] d = ab3d.data.SbDepacker.unpack(Files.readAllBytes(p));
+        check(Files.readAllBytes(p), limit, what);
+    }
+
+    private static void check(byte[] raw, int limit, String what) {
+        byte[] d = ab3d.data.SbDepacker.unpack(raw);
         int end = limit > 0 ? Math.min(limit, d.length) : d.length;
         int ok = 0, bad = 0;
         for (int i = 0; i + 2 <= end; i += 2) {

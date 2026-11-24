@@ -165,7 +165,7 @@ public final class BulletCheck {
         frame.updateObjects(zone, px, pz, standY, false, 1, 0);
 
         int before = frame.objectHandler.energy;
-        boolean went = frame.bullets.fireEnemy(frame.gunData, 6, 7, 32, 4,
+        boolean went = frame.bullets.fireEnemy(frame.gunData, 6, 7, 32, 4, 0,
                                                ex, ez, standY, zone, false,
                                                px, pz, standY);
         System.out.printf("one enemy shot from %d away: spawned %b%n", 300, went);

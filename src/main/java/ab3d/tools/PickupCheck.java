@@ -25,7 +25,7 @@ public final class PickupCheck {
         GameData game = GameData.fromSystemProperty();
         int near = 0, wrongly = 0, useful = 0, keys = 0;
 
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             int wanted = doorBits(lv);
 
@@ -40,12 +40,16 @@ public final class PickupCheck {
                 int grant = lv.data.u8(base + 17);
                 int pt = lv.data.s16(base);
                 int kx = lv.objectPointX[pt], kz = lv.objectPointZ[pt];
+                // ItsAKey tests the storey before anything else, so a key left
+                // on an upper floor -- the eighth level has one -- is only
+                // taken by a player standing up there too
+                boolean up = lv.data.u8(base + 63) != 0;
 
                 // Standing well away from it: nothing may happen
                 Level far = Level.load(game, name);
                 ObjectHandler h = new ObjectHandler(far);
                 h.arm(far.zone(zone));
-                int got = h.update(zone, kx + FAR, kz + FAR, false, 0);
+                int got = h.update(zone, kx + FAR, kz + FAR, up, 0);
                 if (got != 0) {
                     wrongly++;
                     System.out.printf("  %s key in zone %d armed from %d away%n",
@@ -56,7 +60,7 @@ public final class PickupCheck {
                 Level on = Level.load(game, name);
                 h = new ObjectHandler(on);
                 h.arm(on.zone(zone));
-                got = h.update(zone, kx, kz, false, 0);
+                got = h.update(zone, kx, kz, up, 0);
                 int still = on.data.s16(on.ptrObjects + i * GameObject.SIZE + 12);
                 if (got == grant && grant != 0 && still == -1) {
                     near++;

@@ -34,6 +34,14 @@ public final class GunAnims {
 
     private final int[][] frames = new int[LISTS.length][];
 
+    /**
+     * {@code GUNYOFFS}: the row of the view each weapon's graphic starts at.
+     * As assembled -- and as the shipped executable has it -- only the rocket
+     * launcher and the two empty slots start at the top; the shotgun, last,
+     * starts twenty rows down like the rest. The fallback is that table.
+     */
+    private int[] yOffsets = {20, 20, 0, 20, 20, 0, 0, 20};
+
     public static GunAnims load(GameData game) {
         Path src = game.root().resolve("source/jg.s");
         if (Files.isRegularFile(src)) {
@@ -57,6 +65,15 @@ public final class GunAnims {
         for (int i = 0; i < LISTS.length; i++) {
             frames[i] = LISTS[i] == null ? new int[0] : read(src, LISTS[i]);
         }
+        int[] y = read(src, "GUNYOFFS");
+        if (y.length >= LISTS.length) {
+            yOffsets = java.util.Arrays.copyOf(y, LISTS.length);
+        }
+    }
+
+    /** {@code move.w (a1,d0.w*2),d7}: the row this weapon is drawn from. */
+    public int yOffset(int gun) {
+        return gun >= 0 && gun < yOffsets.length ? yOffsets[gun] : 0;
     }
 
     /**

@@ -89,6 +89,11 @@ public final class Renderer68k {
                 // 68000, so the add below then works on the value already there.
                 if (!M68k.divsOverflows(d2, d1)) {
                     d2 = M68k.setW(d2, M68k.divsQuotient(d2, d1));
+                } else if (CLAMP_OVERFLOW) {
+                    // far off to the side: the quotient's own sign, not the
+                    // dividend's low word
+                    overflows++;
+                    d2 = M68k.setW(d2, d2 < 0 ? -OFF_SIDE : OFF_SIDE);
                 }
                 // add.w #47,d2
                 d2 = M68k.setW(d2, M68k.w(d2) + EngineState.CENTRE_X);
@@ -103,6 +108,27 @@ public final class Renderer68k {
             s.onScreen[d7] = (short) d2;
         }
     }
+
+    /**
+     * Whether a projection that overflows is pushed off the side it is on.
+     *
+     * A point almost level with the eye -- a depth of one or two -- and well
+     * out to one side gives {@code divs d1,d2} a quotient past sixteen bits.
+     * The 68000 then leaves {@code d2} as it was, and the column becomes the
+     * low word of the rotated x plus forty-seven: for a point thirty-eight
+     * thousand to the left, twenty-seven thousand to the right. A wall from
+     * there to a point in view then "starts past the right edge" and is
+     * thrown away whole, so for one frame the room in front of the player
+     * vanishes and the sky shows through. The original does exactly this; it
+     * is the rare flash of the screen. With this on the column goes to the
+     * side the point really is on, far enough out that the wall is clipped
+     * as it would be a unit further away.
+     */
+    public static boolean CLAMP_OVERFLOW = true;
+    /** Far enough off either edge to clip, and still clear of the wrap. */
+    private static final int OFF_SIDE = 30000;
+    /** Projections that overflowed, for checking. */
+    public static int overflows;
 
     /**
      * {@code RotateObjectPts}: the same rotation for the object point table.

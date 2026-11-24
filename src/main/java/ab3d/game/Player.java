@@ -140,7 +140,11 @@ public final class Player {
         if ((d1 & -4096) == 0) {
             return;                                 // .noclump
         }
+        footstep(sound);
+    }
 
+    /** {@code PLR1clump}: which footstep, from the floor underfoot. */
+    private void footstep(ab3d.engine.Sound sound) {
         Zone here = level.zone(camera.zone);
         int d0 = here.floorNoise;
         // the water has to be above the floor and above the eye to count
@@ -156,13 +160,196 @@ public final class Player {
     /** {@code PLR1_clumptime}. */
     private int clumpTime;
 
+    /** Moves refused for ending behind their start, for checking. */
+    public int backslides;
+
+    /**
+     * {@code PLR1s_xoff} and {@code PLR1s_zoff}: where the controls have taken
+     * the player, sixteen-sixteen, ahead of the walls. Only the whole part goes
+     * through {@code MoveObject}; the fraction is kept from frame to frame.
+     */
+    private long sx, sz;
+    /**
+     * Where the camera was when {@link #sx} was last made to agree with it.
+     * Anything else that moves the camera -- a new level, a teleport -- is
+     * seen as a difference, and the controls start again from there.
+     */
+    private int syncX, syncZ;
+    private boolean synced;
+
+    private void resync() {
+        if (synced && camera.x == syncX && camera.z == syncZ) {
+            return;
+        }
+        sx = (long) camera.x << 16;
+        sz = (long) camera.z << 16;
+        syncX = camera.x;
+        syncZ = camera.z;
+        synced = true;
+    }
+    /** {@code PLR1s_xspdval}, {@code PLR1s_zspdval}: sixteen-sixteen, a tick. */
+    public int xspd, zspd;
+    /** {@code PLR1s_angspd}. */
+    public int angspd;
+
+    /** {@code move.w #35,d1 / move.w #2,d2}, and {@code #60} and {@code #3} running. */
+    private static final int TURN_MAX = 35, TURN_MAX_RUN = 60;
+    private static final int ACCEL = 2, ACCEL_RUN = 3;
+    /** {@code sub.w #10,d3}: what a turn key adds to the turning speed a tick. */
+    private static final int TURN_ACCEL = 10;
+
+    /**
+     * {@code PLR1_keyboard_control}: one tick of the vertical blank, fifty a
+     * second, whatever the main loop is doing.
+     *
+     * Nothing here touches a wall. The keys push the two speeds, the speeds
+     * lose an eighth of themselves a tick, and the speeds carry the controls'
+     * own position along -- so the player accelerates into a walk, coasts to a
+     * stop, and turns with the same give. Walking tops out at eight units a
+     * tick and running at twelve. The main loop then puts the move through
+     * {@code MoveObject} with {@link #applyMove}; a wall that stops the player
+     * puts the position back but not the speed, which keeps pushing for the
+     * few ticks it takes to die away -- and that is what lets the door under
+     * the player's nose see them touching it when they tap the key.
+     */
+    public void controlTick(ab3d.data.SineTable sine, boolean fwd, boolean back,
+                            boolean left, boolean right, boolean slideLeft,
+                            boolean slideRight, boolean run,
+                            ab3d.engine.Sound sound) {
+        resync();
+        int d1 = run ? TURN_MAX_RUN : TURN_MAX;
+        int d2 = run ? ACCEL_RUN : ACCEL;
+        if (ducked) {
+            d2 = M68k.asrW(d2, 1);                 // asr.w #1,d2
+        }
+
+        // move.w d3,d5 / add.w d5,d5 / add.w d5,d3 / asr.w #2,d3 / bge / addq #1
+        int d3 = M68k.asrW(M68k.w(angspd * 3), 2);
+        if (d3 < 0) {
+            d3++;
+        }
+        if (left) {
+            d3 -= TURN_ACCEL;
+        }
+        if (right) {
+            d3 += TURN_ACCEL;
+        }
+        d3 = Math.max(-d1, Math.min(d1, d3));
+        angspd = d3;
+        // add.w d3,d0 twice into angpos, which counts 8192 to the turn
+        camera.angle = (camera.angle + d3) & (ab3d.data.SineTable.FULL - 1);
+
+        int d4 = 0;
+        if (slideLeft) {
+            d4 = M68k.asrW(d2 + d2, 1);
+        }
+        if (slideRight) {
+            d4 = -M68k.asrW(d2 + d2, 1);
+        }
+
+        int sin = camera.sin(sine), cos = camera.cos(sine);
+        // neg.l / asr.l #3, one more when it was negative: an eighth, rounded
+        int d6 = friction(xspd);
+        int d7 = friction(zspd);
+
+        int f = 0;
+        if (fwd) {
+            f = -d2;
+        }
+        if (back) {
+            f = d2;
+        }
+        // asl.w #6,d2 / add.w PLR1_clumptime,d2: the footsteps run off the same
+        int step = M68k.w(f << 6);
+        int c = M68k.w(clumpTime + step);
+        clumpTime = c & 4095;
+        if ((c & -4096) != 0 && sound != null) {
+            footstep(sound);
+        }
+
+        d6 -= M68k.muls(sin, f);
+        d7 -= M68k.muls(cos, f);
+        d6 -= M68k.muls(cos, d4);
+        d7 += M68k.muls(sin, d4);
+        xspd += d6;
+        zspd += d7;
+        sx += xspd;
+        sz += zspd;
+    }
+
+    private static int friction(int spd) {
+        int d = -spd;
+        return d > 0 ? (d >> 3) + 1 : d >> 3;
+    }
+
+    /**
+     * {@code PLR1_Control}: the main loop's half -- from where the player is to
+     * where the controls have taken them, through the walls.
+     *
+     * {@code move.w newx,PLR1_xoff} writes only the whole part, so the fraction
+     * the controls built up survives a wall.
+     */
+    public void applyMove() {
+        resync();
+        int nx = (int) (sx >> 16), nz = (int) (sz >> 16);
+        if (nx != camera.x || nz != camera.z) {
+            move(M68k.w(nx - camera.x), M68k.w(nz - camera.z));
+        }
+        sx = ((long) camera.x << 16) | (sx & 0xffff);
+        sz = ((long) camera.z << 16) | (sz & 0xffff);
+        syncX = camera.x;
+        syncZ = camera.z;
+    }
+
+    /**
+     * Whether a move that comes out behind where it started is thrown away.
+     *
+     * On, like {@code MoveObject.REFUSE_STRAY} and for the same reason: the
+     * transcribed slide leaves a residue the original's does not. Pushed into
+     * a corner -- a wall and an opening meeting at an angle, as by the start of
+     * the first level -- the two projections put the player a few units
+     * <em>back</em> from one start and forward again from the next, so they
+     * shuttle between two points every frame and the wall in front of their
+     * nose shakes. With the controls' inertia that goes on for the ticks the
+     * speed takes to die away. A move that ends against its own direction is
+     * refused instead; the doors still see the touch, which the mover flagged
+     * on its way.
+     */
+    public static boolean REFUSE_BACKSLIDE = true;
+
+    /**
+     * {@code Collision} for the player: jg.s calls it before {@code MoveObject}
+     * with {@code CollId} at -1 and these flags -- the enemies, the barrel,
+     * the robot -- and a hit is {@code .cantmove}: the position stays, the
+     * controls' speed does not.
+     */
+    public ab3d.engine.Collision collision;
+    /** {@code move.l #%1011111110111000001,CollideFlags}. */
+    private static final int COLLIDE_FLAGS = 0b1011111110111000001;
+    /**
+     * Whose half-width the player has. {@code CollId} is -1, so the original
+     * reads the type byte of the record before the first one -- whatever lies
+     * there. The player's own row of the table is what it was meant to be.
+     */
+    private static final int OWN_TYPE = 5;
+
     public void move(int dx, int dz) {
+        int x0 = camera.x, z0 = camera.z;
+        if (collision != null && collision.blocked(-1, OWN_TYPE, stoodInTop,
+                camera.yoff, height, x0, z0, x0 + dx, z0 + dz, COLLIDE_FLAGS)) {
+            return;                          // bra .cantmove
+        }
         mover.enterStorey(stoodInTop);       // move.b PLR1_StoodInTop,StoodInTop
         mover.move(camera.zone, camera.x, camera.z,
                    camera.x + dx, camera.z + dz,
                    camera.yoff, camera.yoff,
                    EXT_LEN, height, ducked ? STEP_UP_DUCKED : STEP_UP, STEP_DOWN,
                    ab3d.engine.Doors.PLAYER1, AWAY_FROM_WALL);
+        if (REFUSE_BACKSLIDE
+                && (long) (mover.x - x0) * dx + (long) (mover.z - z0) * dz < 0) {
+            backslides++;
+            return;                          // stay where the last move left them
+        }
         // move.b StoodInTop,PLR1_StoodInTop: the mover decides which storey
         stoodInTop = mover.stoodInTop;
         camera.x = mover.x;

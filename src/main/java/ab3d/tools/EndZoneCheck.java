@@ -17,7 +17,7 @@ public final class EndZoneCheck {
         GameData game = GameData.fromSystemProperty();
         EndZones ends = EndZones.load(game);
         System.out.printf("ENDZONES holds %d entries%n%n", ends.count());
-        String[] names = {"level_a", "level_b", "level_c", "level_d"};
+        String[] names = Levels.all();
         for (int i = 0; i < names.length; i++) {
             Level lv = Level.load(game, names[i]);
             int z = ends.of(i);

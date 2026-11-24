@@ -60,8 +60,10 @@ public final class Barrel {
 
         if (lv.data.s16(base + Obj.SLOT) == BURST_SLOT) {
             // it is already going off: grow, count, and then be gone
-            lv.data.setS16(base + Obj.BRIGHT,
-                           M68k.w(lv.data.s16(base + Obj.BRIGHT) + GROW));
+            // add.w #$404,6(a0): the burst grows in the world, four units each
+            // way a frame -- the scale word, not the brightness two bytes ahead
+            lv.data.setS16(base + Obj.SCALE,
+                           M68k.w(lv.data.s16(base + Obj.SCALE) + GROW));
             int d0 = lv.data.s16(base + Obj.FRAME) + 1;
             if (d0 == BURST_FRAMES) {
                 lv.data.setS16(base + Obj.ZONE, -1);

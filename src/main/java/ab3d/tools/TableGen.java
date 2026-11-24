@@ -60,12 +60,15 @@ public final class TableGen {
             ColBox boxes = ColBox.load(game);
             int[] width = new int[boxes.count()];
             int[] height = new int[boxes.count()];
+            int[] span = new int[boxes.count()];
             for (int i = 0; i < width.length; i++) {
                 width[i] = boxes.width(i);
                 height[i] = boxes.height(i);
+                span[i] = boxes.span(i);
             }
             ints(w, "COL_WIDTH", "{@code ColBoxTable}: half-width by type.", width);
             ints(w, "COL_HEIGHT", "And how far above or below still counts.", height);
+            ints(w, "COL_SPAN", "And how tall the box {@code Collision} tests is.", span);
 
             GunData guns = GunData.load(game);
             int[] gunBytes = new int[GunData.GUNS * GunData.RECORD];
@@ -192,7 +195,7 @@ public final class TableGen {
 
             int[][] basePal = new int[SpriteBank.SHEETS.length][];
             for (int i = 0; i < basePal.length; i++) {
-                Path pal = game.include(SpriteBank.SHEETS[i] + ".pal");
+                Path pal = ab3d.data.SpriteSheet.paletteFile(game, SpriteBank.SHEETS[i]);
                 if (!Files.isRegularFile(pal)) {
                     basePal[i] = new int[0];
                     continue;

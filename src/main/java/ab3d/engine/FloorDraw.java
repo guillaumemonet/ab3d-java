@@ -86,6 +86,9 @@ public final class FloorDraw {
         Setup r = new Setup();
         int d6 = M68k.w(g.s16(at));              // move.w (a0)+,d6 : ypos of poly
         r.sides = g.s16(at + 2);
+        // dontdrawreturn skips 2 (ypos) + 2 (sides) + 2*sides + 10, and every
+        // rejection below goes there -- so the size is known before any of them
+        r.recordBytes = 4 + 2 * r.sides + 10;
 
         // The RTG build rejects a surface outside the room part before doing any
         // other work:
@@ -102,8 +105,6 @@ public final class FloorDraw {
             r.rejectedBy = "below the room";
             return r;
         }
-        // dontdrawreturn skips 2 (ypos) + 2 (sides) + 2*sides + 10
-        r.recordBytes = 4 + 2 * r.sides + 10;
 
         // move.w leftclip,d7 / cmp.w rightclip,d7 / bge dontdrawreturn
         if (s.leftClip >= s.rightClip) {

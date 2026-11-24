@@ -20,7 +20,7 @@ public final class TravelCheck {
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
         int doorsOk = 0, doorsBad = 0, liftsOk = 0, liftsBad = 0;
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             // read the shipped heights before anything overwrites them
             int[] floor = new int[lv.zones.length];

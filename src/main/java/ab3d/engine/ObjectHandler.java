@@ -17,9 +17,9 @@ import ab3d.m68k.M68k;
  * are worried about dispatches on byte 16 -- the type. Nothing far away is ever
  * looked at, which is why the game can afford a per-object test this direct.
  *
- * Only the key branch is here. The other types are enemies and the rest of the
- * pickups, and each is its own routine; the dispatch below names them so what
- * is missing is visible rather than silently folded into "nothing happens".
+ * The four pickups are here. The rest of the types are enemies, the barrel,
+ * the gas pipe and the shots, and each is its own class; the dispatch below
+ * names them in the original's order.
  */
 public final class ObjectHandler {
 
@@ -67,6 +67,10 @@ public final class ObjectHandler {
     public Bullets bullets;
     /** {@code ItsABarrel}. */
     public Barrel barrel;
+    /** {@code ItsAGasPipe}. */
+    public GasPipe gasPipe;
+    /** {@code ItsARobot}. */
+    public Robot robot;
     public ab3d.data.GunData gunData;
     /** {@code TempFrames}, which the enemies move and count timers by. */
     public int frames = 1;
@@ -123,11 +127,13 @@ public final class ObjectHandler {
      */
     public int update(int playerZone, int playerX, int playerZ,
                       boolean playerInTop, int conditions) {
-        // the two shot pools are not in the object list, so they are walked
-        // separately -- ObjectHandler reaches them because the level's records
-        // run on past the placed objects
-        flyPool(lv.ptrPlayerShots);
-        flyPool(lv.ptrEnemyShots);
+        // The three pools of twenty -- the player's shots, the enemies' shots,
+        // and OtherNastyData where the trees sow eyeballs -- are not walked
+        // apart. They are records of this same list, straight after the placed
+        // objects in every one of the sixteen levels (PoolProbe), so this loop
+        // reaches them as the original's does. A shot runs because its spawn
+        // sets worry and nothing clears it. Walking the pools a second time, as
+        // this port once did, flew every shot at twice its speed.
         for (int i = 0; i < lv.objects.size(); i++) {
             GameObject o = lv.objects.get(i);
             int base = lv.ptrObjects + i * GameObject.SIZE;
@@ -149,6 +155,15 @@ public final class ObjectHandler {
                 barrel.update(base, playerZone, playerInTop);   // JUMPBARREL
                 continue;
             }
+            if (type == GasPipe.TYPE && gasPipe != null) {
+                gasPipe.update(base, frames);                   // JUMPGASPIPE
+                continue;
+            }
+            if (type == Robot.TYPE && robot != null) {
+                robot.update(base, frames, playerX, playerZ, playerY,
+                             playerZone, playerInTop);           // JUMPROBOT
+                continue;
+            }
             Enemy.Kind kind = Enemy.kindOf(type);
             if (kind != null && enemies != null) {
                 enemies.update(kind, base, frames, playerX, playerZ, playerY,
@@ -166,10 +181,9 @@ public final class ObjectHandler {
                         playerInTop);
                 default -> { }
             }
-            // Of the rest, the levels only ever place the flying nasty, the
-            // barrel, the marine, the tough marine and the flame marine. The
-            // robot, the worm, the big red thing, the tree, the eyeball and the
-            // gas pipe have routines of their own and are never put anywhere.
+            // Five and eleven are the two players, whose records are in this
+            // list but are moved by their own control code. Every other type
+            // a level places has its routine above.
         }
         syncDrawnState();
         return conditions;
@@ -203,25 +217,14 @@ public final class ObjectHandler {
             // a clip, $1f1f for a barrel and $2020 while it goes up
             o.spriteWidth = lv.data.u8(base + Obj.SPRITE_SIZE);
             o.spriteHeight = lv.data.u8(base + Obj.SPRITE_SIZE + 1);
+            // and the later enemies their size in the world as well -- the worm
+            // is ninety by a hundred, the big red thing $fe by $fe, and the key
+            // it turns into $20 by $20
+            o.widthScale = lv.data.u8(base + Obj.SCALE);
+            o.heightScale = lv.data.u8(base + Obj.SCALE + 1);
             // GraphicRoom, not the zone it stands in: the two are the same for
             // anything that has not moved, and the routines set this one last
             o.zone = lv.data.s16(base + Obj.GRAPHIC_ROOM);
-        }
-    }
-
-    /** One pool of twenty shot records. */
-    private void flyPool(int pool) {
-        if (bullets == null || gunData == null) {
-            return;
-        }
-        for (int i = 0; i < Bullets.POOL; i++) {
-            int base = pool + i * GameObject.SIZE;
-            if (!lv.data.inRange(base, GameObject.SIZE)) {
-                return;
-            }
-            if (lv.data.s16(base + Obj.ZONE) >= 0) {
-                bullets.update(base, frames, gunData);
-            }
         }
     }
 

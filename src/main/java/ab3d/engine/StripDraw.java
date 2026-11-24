@@ -193,6 +193,8 @@ public final class StripDraw {
              | ((b[o + 2] & 0xff) << 8) | (b[o + 3] & 0xff);
     }
 
+
+
     /** Anchor value the table is built around, kept for the check tool. */
     public int anchorAt(int depth) {
         int d = Math.max(0, Math.min(depth, stepByDepth.length - 1));

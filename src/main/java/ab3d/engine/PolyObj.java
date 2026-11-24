@@ -172,7 +172,12 @@ public final class PolyObj {
         objClipT = s.topClip;
         objClipB = s.botClip;
 
-        if (!rotate(model, o, facing, midZ, s.objRotX[point])) {
+        // move.l 4(a1,d0.w*8),d0 -- the long at offset four: X already scaled
+        // by 128 and wobbled, the same scale the rotated points come out in.
+        // (The word at offset zero is the unscaled X; with it every model was
+        // drawn a hundred and twenty-eight times too near the middle of the
+        // view, off its wall and hanging in the air.)
+        if (!rotate(model, o, facing, midZ, s.objScaledX[point])) {
             return reject("allbehind");
         }
 

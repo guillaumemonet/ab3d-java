@@ -19,7 +19,7 @@ public final class ConvexCheck {
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
         for (String name : args.length > 0 ? args
-                : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+                : Levels.all()) {
             Level lv = Level.load(game, name);
             int sampled = 0, failed = 0, zonesFailing = 0;
             for (Zone z : lv.zones) {

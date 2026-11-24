@@ -17,9 +17,11 @@ import java.util.regex.Pattern;
  * gun, key, player one, robot, and so on -- which is what confirms the dispatch
  * numbers from a second place.
  *
- * Only the first word is used here. {@code CalcPLR1InLine} compares it against
- * the sideways distance from the player's line of sight, so it is the half-width
- * the auto-aim has to be within.
+ * The first word is the half-width: {@code CalcPLR1InLine} compares it against
+ * the sideways distance from the player's line of sight, and {@code Collision}
+ * against the larger of the two distances on the ground. The second and third
+ * are a vertical box -- how far below the object's height it starts, and how
+ * tall it is -- which the shots and {@code Collision} test against.
  */
 public final class ColBox {
 
@@ -37,13 +39,15 @@ public final class ColBox {
                 // an unreadable source simply means using the saved table
             }
         }
-        return new ColBox(ab3d.gen.Tables.COL_WIDTH, ab3d.gen.Tables.COL_HEIGHT);
+        return new ColBox(ab3d.gen.Tables.COL_WIDTH, ab3d.gen.Tables.COL_HEIGHT,
+                          ab3d.gen.Tables.COL_SPAN);
     }
 
-    private ColBox(int[] width, int[] height) {
+    private ColBox(int[] width, int[] height, int[] span) {
         rows = new int[width.length][];
         for (int i = 0; i < width.length; i++) {
-            rows[i] = new int[]{width[i], height[i], 0, 0};
+            rows[i] = new int[]{width[i], height[i],
+                                i < span.length ? span[i] : 0, 0};
         }
     }
 
@@ -75,6 +79,15 @@ public final class ColBox {
     /** {@code cmp.w 2(a6),d2}: how far above or below still counts as a hit. */
     public int height(int type) {
         return type >= 0 && type < rows.length ? rows[type][1] : 0;
+    }
+
+    /**
+     * {@code add.w 4(a2,d3.w*8),d1}: how tall the box is, from the bottom that
+     * {@link #height} sets below the object's own height. {@code Collision}
+     * is the only reader.
+     */
+    public int span(int type) {
+        return type >= 0 && type < rows.length ? rows[type][2] : 0;
     }
 
     public int count() {

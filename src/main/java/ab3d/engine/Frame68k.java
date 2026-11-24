@@ -72,6 +72,14 @@ public final class Frame68k {
     public final Bullets bullets;
     /** {@code ItsABarrel}, which explodes rather than moves. */
     public final Barrel barrel;
+    /** {@code ItsAGasPipe}, which neither moves nor can be hurt. */
+    public final GasPipe gasPipe;
+    /** {@code ItsARobot}, the one model that walks. */
+    public final Robot robot;
+    /** {@code Collision}, for the enemies and the player. */
+    public final Collision collision;
+    /** {@code FindCloseRoom}, shared by the three that call it. */
+    public final CloseRoom closeRoom;
 
     /**
      * Where every {@code jsr MakeSomeNoise} in the engine goes.
@@ -88,6 +96,8 @@ public final class Frame68k {
         enemies.sound = s;
         barrel.sound = s;
         bullets.sound = s;
+        gasPipe.sound = s;
+        robot.sound = s;
     }
     /** {@code Conditions}: the bits the switches and keys have set so far. */
     public int conditions;
@@ -175,6 +185,19 @@ public final class Frame68k {
         this.enemies.sine = this.sine;
         this.barrel = new Barrel(level, this.alienControl, this.bullets);
         this.objectHandler.barrel = this.barrel;
+        this.gasPipe = new GasPipe(level, this.bullets, this.sine);
+        this.objectHandler.gasPipe = this.gasPipe;
+        this.robot = new Robot(level, this.alienControl, new MoveObject(level),
+                               this.sine, new Enemy.Rand());
+        this.robot.bullets = this.bullets;
+        this.robot.guns = this.gunData;
+        this.objectHandler.robot = this.robot;
+        this.closeRoom = new CloseRoom(level);
+        this.closeRoom.order = this.order;
+        this.enemies.closeRoom = this.closeRoom;
+        this.collision = new Collision(level, boxes);
+        this.enemies.collision = this.collision;
+        this.robot.closeRoom = this.closeRoom;
         this.floor.setSineTable(this.sine);
     }
 
@@ -636,6 +659,7 @@ public final class Frame68k {
         });
     }
 
+
     /** {@code itsawalldraw} and everything downstream of it. */
     private void drawWall(BinReader gg, int at) {
         wallsSeen++;
@@ -659,15 +683,35 @@ public final class Frame68k {
         }
         calc.run(subdivide, w.topOfWall, w.botOfWall, subdivide.multCount);
         WadTexture tex = wallTextures.get(w.textureIndex);
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         for (CalcAndDraw.Strip st : calc.strips) {
             if (!divide.run(st)) {
                 continue;
             }
+            if (wallSpans != null) {
+                for (int i = 0; i < divide.count; i++) {
+                    lo = Math.min(lo, divide.columnAt[i]);
+                    hi = Math.max(hi, divide.columnAt[i]);
+                }
+            }
             strip.run(divide, tex, w);
             wallRows += strip.rowsWritten;
         }
+        if (wallSpans != null) {
+            wallSpans.add(new int[]{w.pointA, w.pointB, lo, hi,
+                                    s.onScreen[w.pointA], s.onScreen[w.pointB],
+                                    s.leftClip, s.rightClip, w.textureIndex,
+                                    w.topOfWall, w.botOfWall});
+        }
         wallsDrawn++;
     }
+
+    /**
+     * When not null, each wall drawn adds its two points, the columns it
+     * covered, its two projected columns and the clip window -- for tracing a
+     * gap between walls.
+     */
+    public java.util.List<int[]> wallSpans;
 
     /** {@code itsafloordraw}, both passes. */
     private void drawSurface(BinReader gg, int at, int type) {

@@ -26,7 +26,7 @@ public final class EnemyCheck {
 
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             for (Enemy.Kind k : Enemy.KINDS) {
                 run(game, name, k);
             }
@@ -147,11 +147,24 @@ public final class EnemyCheck {
         // were aimed squarely at it.
         int left = lv.data.u8(base + Obj.NUM_LIVES);
         int damage = frame.gunData.byteAt(0, GunData.DAMAGE);
+        // and the later files' armour: asr.b #2 on what got through, with or
+        // without a floor of one -- the worm, the tree and the big red thing
+        Enemy.Kind kind = Enemy.kindOf(lv.data.u8(base + Obj.TYPE));
+        if (kind != null && kind.traits().armour() > 0) {
+            int through = damage >> kind.traits().armour();
+            damage = through > 0 ? through : kind.traits().armourFloor() ? 1 : 0;
+        }
         int expect = Math.max(0, lives - hitsHere * damage);
         System.out.printf("           shot one with %3d lives: %2d shots, %2d aimed "
                           + "at it, %2d landed, %3d lives left (%d expected)%s%n",
                           lives, shots, aimedHere, hitsHere, left, expect,
-                          left == expect ? "" : "  <-- does not add up");
+                          left == expect ? ""
+                          : left < expect && kind != null
+                                  && (kind.shotType() == 2 || kind.shotType() == 4)
+                                  && kind.shoot() != 0
+                          ? "  (less: its own rockets blow up beside it, and"
+                            + " ComputeBlast spares no-one)"
+                          : "  <-- does not add up");
 
         // the dying frames only start once the lives are gone
         StringBuilder f = new StringBuilder();

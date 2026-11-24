@@ -49,7 +49,7 @@ public final class EnemyCensus {
         int[] total = new int[NAME.length];
         int[] alive = new int[NAME.length];
 
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : game.diskLevels()) {
             Level lv = Level.load(game, name);
             int[] count = new int[NAME.length];
             int[] withLives = new int[NAME.length];
@@ -83,7 +83,7 @@ public final class EnemyCensus {
             System.out.printf("%-8s%s%n", name, b.length() == 0 ? "  none" : b);
         }
 
-        System.out.println("\nacross the four levels, enemies only:");
+        System.out.println("\nacross every level on the disks, enemies only:");
         int kinds = 0, placed = 0;
         for (int t = 0; t < total.length; t++) {
             if (total[t] > 0 && isEnemy(t)) {

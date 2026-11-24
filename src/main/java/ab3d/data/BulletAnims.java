@@ -35,7 +35,7 @@ public final class BulletAnims {
     /** One step: {@code move.w d2,6(a0) / move.l 2(a2,..),8(a0) / add.w 6(..)}. */
     public record Step(int size, int slot, int frame, int rise) {}
 
-    public static final int SLOTS = 32;
+    public static final int SLOTS = 54;
 
     private final Step[][] flight = new Step[SLOTS][];
     private final Step[][] burst = new Step[SLOTS][];

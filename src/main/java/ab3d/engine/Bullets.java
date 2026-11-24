@@ -129,8 +129,8 @@ public final class Bullets {
      * through.
      */
     public boolean fireEnemy(GunData guns, int shotType, int power, int speed,
-                             int shift, int x, int z, int y, int zone,
-                             boolean inTop, int toX, int toZ, int toY) {
+                             int shift, int offMult, int x, int z, int y,
+                             int zone, boolean inTop, int toX, int toZ, int toY) {
         int base = free(lv.ptrEnemyShots);
         if (base < 0) {
             refused++;
@@ -149,6 +149,22 @@ public final class Bullets {
         int vx = M68k.muls(dx, speed) / dist;
         int vz = M68k.muls(dz, speed) / dist;
 
+        if (offMult != 0) {
+            // move.w SHOTOFFMULT,d2 / muls d2,d0 / muls d2,d1 / asr.l #8 /
+            // add.w d1,oldx / sub.w d0,oldz: the start is pushed square to the
+            // line of fire, by that many 256ths of one frame's travel -- to the
+            // left for a positive multiplier -- and the aim taken again from
+            // there. It is how the worm fires from its mouth and the big red
+            // thing from its gun arm rather than from their middles.
+            x = M68k.w(x + (M68k.muls(vz, offMult) >> 8));
+            z = M68k.w(z - (M68k.muls(vx, offMult) >> 8));
+            dx = M68k.w(toX - x);
+            dz = M68k.w(toZ - z);
+            int again = Math.max(1, (int) Math.sqrt((long) dx * dx + (long) dz * dz));
+            vx = M68k.muls(dx, speed) / again;
+            vz = M68k.muls(dz, speed) / again;
+        }
+
         // the vertical speed that meets the target over that distance
         int steps = Math.max(1, dist >> (shift & 15));
         int rise = (int) (((long) (toY - y) * 2) / steps);
@@ -157,6 +173,49 @@ public final class Bullets {
         spawned++;
         return true;
     }
+
+    /** {@code move.b #3,shotsize(a5)} and {@code move.b #7,shotpower(a5)}. */
+    public static final int FLAME_SHOT = 3, FLAME_POWER = 7;
+    /** {@code sub.w #80,d0}: the flame leaves this far above the pipe's height. */
+    public static final int FLAME_RISE = 80;
+
+    /**
+     * The gas pipe's {@code .foundonefree}: a gout of flame along its facing.
+     *
+     * Nothing about it is aimed. The pipe points the way the level editor
+     * faced it, perpendicular to its wall, and the flame goes that way level --
+     * no vertical speed, no gravity -- at a sixteenth of the sine table's unit
+     * per frame: {@code asl.l #4 / swap}, which leaves the sine's top four bits,
+     * up to seven units a frame. It is drawn with the plasma bolt's pictures,
+     * does seven damage, and may hit only the players.
+     *
+     * @param dirX the sine of the pipe's facing, as the table holds it
+     * @param dirZ and the cosine
+     */
+    public boolean fireFlame(int x, int z, int height, int zone, boolean inTop,
+                             int dirX, int dirZ) {
+        int base = free(lv.ptrEnemyShots);
+        if (base < 0) {
+            refused++;
+            return false;                            // dbra runs out: rts
+        }
+        int y = M68k.w(height - FLAME_RISE) << 7;    // ext.l / asl.l #7
+        // ext.l d1 / asl.l #4,d1 / swap d1 / move.w d1,shotxvel(a5): the word
+        // written is the high half of the sixteen-sixteen velocity
+        int vx = (int) (((long) (short) dirX << 4) >> 16);
+        int vz = (int) (((long) (short) dirZ << 4) >> 16);
+        put(base, x, z, y, zone, inTop, vx << 16, vz << 16, 0, HITS_PLAYERS);
+        lv.data.setU8(base + Obj.SHOT_SIZE, FLAME_SHOT);
+        lv.data.setS16(base + Obj.SHOT_FLAGS, 0);
+        lv.data.setS16(base + Obj.SHOT_GRAV, 0);
+        lv.data.setU8(base + Obj.SHOT_POWER, FLAME_POWER);
+        spawned++;
+        flames++;
+        return true;
+    }
+
+    /** Flames the gas pipes have let out, for checking. */
+    public int flames;
 
     /** The fields both spawns set the same way. */
     private void put(int base, int x, int z, int y, int zone, boolean inTop,
@@ -240,11 +299,42 @@ public final class Bullets {
         lv.data.setS16(base + Obj.SPRITE_SIZE, anims.burstSize(shot));
         BulletAnims.Step step = list[at];
         lv.data.setU8(base + Obj.SHOT_ANIM, at + 1);
-        lv.data.setS16(base + Obj.BRIGHT, step.size());   // move.w d2,6(a0)
+        lv.data.setS16(base + Obj.SCALE, step.size());    // move.w d2,6(a0)
         lv.data.setS16(base + Obj.SLOT, step.slot());
         lv.data.setS16(base + Obj.FRAME, step.frame());
         lv.data.setS16(base + Obj.HEIGHT,
                        M68k.w(lv.data.s16(base + Obj.HEIGHT) + step.rise()));
+        lv.data.setS32(base + Obj.ACC_YPOS,
+                       lv.data.s32(base + Obj.ACC_YPOS) + (step.rise() << 7));
+    }
+
+    /**
+     * {@code notpopping}: one step of the flight list.
+     *
+     * The same eight-byte steps as a burst -- a size for the world, the slot
+     * and frame, a height to add -- read in a loop. The step after the last is
+     * the list's negative end marker, and reading it sends the count back to
+     * nought <em>and</em> shows step nought, so the first picture of every
+     * cycle is held for two frames. The pieces of a body thrown by
+     * {@code ExplodeIntoBits} fly this way too: their shot numbers, fifty to
+     * fifty-three, are the last four entries of {@code BulletTypes}.
+     */
+    private void fly(int base, int shot) {
+        BulletAnims.Step[] list = anims.flight(shot);
+        if (list.length == 0) {
+            return;                                  // dc.l 0,0: nothing to show
+        }
+        lv.data.setS16(base + Obj.SPRITE_SIZE, anims.flyingSize(shot));
+        int at = lv.data.u8(base + Obj.SHOT_ANIM);
+        lv.data.setU8(base + Obj.SHOT_ANIM, at + 1);   // add.b #1,shotanim(a0)
+        if (at >= list.length) {
+            lv.data.setU8(base + Obj.SHOT_ANIM, 0);    // bge.s notdoneanim
+            at = 0;
+        }
+        BulletAnims.Step step = list[at];
+        lv.data.setS16(base + Obj.SCALE, step.size());
+        lv.data.setS16(base + Obj.SLOT, step.slot());
+        lv.data.setS16(base + Obj.FRAME, step.frame());
         lv.data.setS32(base + Obj.ACC_YPOS,
                        lv.data.s32(base + Obj.ACC_YPOS) + (step.rise() << 7));
     }
@@ -425,6 +515,8 @@ public final class Bullets {
                 lv.data.setS16(base + Obj.SHOT_LIFE, M68k.w(spent + frames));
             }
         }
+
+        fly(base, gun);
 
         boolean inTop = lv.data.u8(base + Obj.IN_TOP) != 0;
         int flags = lv.data.s16(base + Obj.SHOT_FLAGS);

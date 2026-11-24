@@ -16,7 +16,7 @@ public final class UpperCheck {
 
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             int real = 0, tall = 0;
             for (int i = 0; i < lv.zones.length; i++) {

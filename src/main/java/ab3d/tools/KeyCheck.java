@@ -15,7 +15,7 @@ public final class KeyCheck {
 
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
-        for (String name : new String[]{"level_a", "level_b", "level_c", "level_d"}) {
+        for (String name : Levels.all()) {
             Level lv = Level.load(game, name);
             int granted = 0, found = 0;
             StringBuilder b = new StringBuilder();

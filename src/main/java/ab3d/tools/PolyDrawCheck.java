@@ -19,7 +19,9 @@ import ab3d.engine.Frame68k;
  */
 public final class PolyDrawCheck {
 
-    private static final int BACK_OFF = 400;
+    private static final int BACK_OFF = 150;
+    /** About eye height above the model's own height, in the engine's units. */
+    private static final int EYE = 96 << 7;
 
     public static void main(String[] args) throws Exception {
         GameData game = GameData.fromSystemProperty();
@@ -44,14 +46,23 @@ public final class PolyDrawCheck {
                 total++;
                 here++;
                 int before = frame.poly.pixelsWritten;
-                // look at it from four angles, in case one has it edge-on
+                // stand off on each of the four sides and look back at it.
+                // The view angle is out of 4096 (0 looks along +z, 1024 along
+                // +x); this once turned by 2048 from a point off to +x, so it
+                // never faced the model -- and passed only because models were
+                // then drawn in the middle of the view wherever they stood.
                 boolean any = false;
-                for (int turn = 0; turn < 4 && !any; turn++) {
+                int[][] sides = {{BACK_OFF, 0, 3072}, {-BACK_OFF, 0, 1024},
+                                 {0, BACK_OFF, 2048}, {0, -BACK_OFF, 0}};
+                for (int[] sd : sides) {
                     frame.render(o.zone,
-                                 lv.objectPointX[o.pointIndex] + BACK_OFF,
-                                 lv.objectPointZ[o.pointIndex],
-                                 o.height << 7, turn * 2048);
-                    any = frame.poly.pixelsWritten > before;
+                                 lv.objectPointX[o.pointIndex] + sd[0],
+                                 lv.objectPointZ[o.pointIndex] + sd[1],
+                                 (o.height << 7) - EYE, sd[2]);
+                    if (frame.poly.pixelsWritten > before) {
+                        any = true;
+                        break;
+                    }
                 }
                 if (any) {
                     drew++;
