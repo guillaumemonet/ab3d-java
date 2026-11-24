@@ -1,108 +1,108 @@
-# Alien Breed 3D — portage Java
+# Alien Breed 3D — Java Port
 
-Portage en Java du moteur d'**Alien Breed 3D** (Team17, 1995), transcrit
-ligne à ligne depuis l'assembleur 68000 d'origine.
+*[Version française](README_fr.md)*
 
-![Le niveau 4](docs/images/level_d.png)
+A Java port of the **Alien Breed 3D** engine (Team17, 1995), transcribed
+line by line from the original 68000 assembly.
 
-Le rendu est un rasteriseur logiciel qui reproduit l'arithmétique du 68000 :
-mêmes divisions entières, mêmes débordements, même ordre de dessin.
-jMonkeyEngine n'ouvre que la fenêtre, lit le clavier et affiche une texture ;
-il ne dessine rien lui-même. Les données du jeu d'origine sont lues telles
-quelles à l'exécution — aucune conversion hors ligne.
+![Level 4](docs/images/level_d.png)
+
+Rendering is a software rasteriser that reproduces the 68000's arithmetic:
+same integer divisions, same overflows, same drawing order.
+jMonkeyEngine only opens the window, reads the keyboard and displays a texture;
+it draws nothing itself. The original game data is read as is at run time —
+no offline conversion.
 
 | | |
 |---|---|
-| ![Le menu](docs/images/menu.png) | ![Le niveau 1](docs/images/level_a.png) |
+| ![The menu](docs/images/menu.png) | ![Level 1](docs/images/level_a.png) |
 
-## Ce qui tourne
+## What runs
 
-Écran-titre en fondu, menu avec mot de passe et reconfiguration des touches,
-rendu logiciel complet (murs, sols, plafonds, sprites, arme en main, fond de
-ciel, eau), bandeau et jauges, portes, ascenseurs, interrupteurs, clés et
-conditions, ramassages, tous les ennemis que posent les seize niveaux — qui
-rôdent, repèrent, poursuivent, mordent, tirent, sèment ou crachent du feu —, six
-armes dont trois à projectiles, explosions avec souffle et éclats, barils, le son, la fin de niveau avec son mot de passe, et le
-lecteur de modules ProTracker.
+Fading title screen, menu with password and key remapping, full software
+rendering (walls, floors, ceilings, sprites, gun in hand, sky backdrop,
+water), status bar and gauges, doors, lifts, switches, keys and conditions,
+pickups, every enemy the sixteen levels place — prowling, spotting, chasing,
+biting, shooting, spawning or breathing fire —, six weapons, three of them
+firing projectiles, explosions with blast and debris, barrels, sound, the end
+of level with its password, and the ProTracker module player.
 
-Un niveau se termine quand le joueur entre dans une salle précise — `ENDZONES`
-en donne une par niveau, et c'est là toute la condition de victoire. Gagner
-ajoute un au niveau maximum et écrit le mot de passe suivant sur la ligne du
-menu ; perdre laisse cette ligne intacte, ce qui interdit de gagner un mot de
-passe en mourant.
+A level ends when the player enters a specific room — `ENDZONES` gives one per
+level, and that is the whole victory condition. Winning adds one to the maximum
+level and writes the next password on the menu line; losing leaves that line
+untouched, so a password cannot be earned by dying.
 
-## Faire tourner
+## Running it
 
-Il faut **les deux disquettes du jeu** (`.adf`), et rien d'autre.
+You need **the game's two disks** (`.adf`), and nothing else.
 
-Elles portent les seize niveaux, les sons, les seize feuilles de sprites, les
-quatorze textures de murs, les carreaux de sol et l'écran-titre : quarante-cinq
-des soixante-dix fichiers que le moteur ouvre, 501 Ko.
+They hold the sixteen levels, the sounds, the sixteen sprite sheets, the
+fourteen wall textures, the floor tiles and the title screen: forty-five of
+the seventy files the engine opens, 501 KB.
 
-Les vingt-deux autres — table des sinus, fond de ciel, bandeau et ses bordures,
-police du menu, palettes, tables d'ombrage et d'eau, icônes de clés, les trois
-modules de musique — n'ont jamais été sur une disquette : l'exécutable Amiga les
-avait compilés dedans avec `INCBIN`. Ce dépôt les porte donc lui-même, 307 Ko
-dans `src/main/resources/ab3d/includes/`. Deux de plus sont **calculés** plutôt
-que livrés, et deux ne sont nulle part (`uglymonster`, qu'aucun niveau ne place).
+The other twenty-two — sine table, sky backdrop, status bar and its borders,
+menu font, palettes, shading and water tables, key icons, the three music
+modules — were never on a disk: the Amiga executable had them compiled in with
+`INCBIN`. This repository therefore carries them itself, 307 KB in
+`src/main/resources/ab3d/includes/`. Two more are **computed** rather than
+shipped, and two are nowhere (`uglymonster`, which no level places).
 
-L'arbre des sources publié par Team17 n'est plus nécessaire pour jouer. Il reste
-utile pour les contrôles de conformité, qui comparent le portage à l'assembleur,
-et `gradle tool -Ptool=DiskCoverCheck` refait ce compte lui-même à tout moment.
+The source tree published by Team17 is no longer needed to play. It remains
+useful for the conformance checks, which compare the port with the assembly,
+and `gradle tool -Ptool=DiskCoverCheck` redoes this count itself at any time.
 
-Depuis un checkout :
+From a checkout:
 
 ```
 gradle run -Dab3d.disk=../adf-extract
 ```
 
-### Application autonome
+### Standalone application
 
 ```
 gradle jpackage
 ```
 
-produit dans `build/dist/` une application avec sa propre JVM, qui n'exige rien
-d'installé. Au premier lancement elle demande les deux disquettes, les extrait
-elle-même (le lecteur ADF gère OFS et FFS) et retient la réponse dans
-`~/.ab3d-java`. Les lancements suivants démarrent directement.
+produces in `build/dist/` an application with its own JVM, which requires
+nothing installed. On first launch it asks for the two disks, extracts them
+itself (the ADF reader handles OFS and FFS) and remembers the answer in
+`~/.ab3d-java`. Later launches start straight away.
 
-Deux routes pour les disquettes : indiquer tes propres fichiers `.adf`, ou les
-prendre sur **Dream17**, l'archive de préservation Amiga, qui les sert toutes
-les deux dans un même fichier. Rien n'est téléchargé sans que le choix soit
-fait.
+Two routes for the disks: point to your own `.adf` files, or fetch them from
+**Dream17**, the Amiga preservation archive, which serves both in a single
+file. Nothing is downloaded until the choice is made.
 
-`-Ppackage=msi` (ou `deb`, `dmg`) produit un installeur natif à la place, si les
-outils correspondants sont présents.
+`-Ppackage=msi` (or `deb`, `dmg`) produces a native installer instead, if the
+matching tools are present.
 
-### Commandes
+### Controls
 
-Ce sont celles de `CONTROLBUFFER`, pas un schéma moderne, et elles sont
-reconfigurables depuis **CONTROL OPTIONS**.
+These are the ones from `CONTROLBUFFER`, not a modern scheme, and they can be
+remapped from **CONTROL OPTIONS**.
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| Flèches ← → | tourner |
-| Flèches ↑ ↓ | avancer, reculer |
-| `.` `/` | pas de côté |
-| Maj droite | courir |
-| Alt droit | tirer |
-| Espace | portes, ascenseurs, interrupteurs |
-| `D` | s'accroupir |
-| `L` | regarder derrière |
-| `1`–`5` | fusil à impulsion, à pompe, plasma, grenades, roquettes |
+| Arrows ← → | turn |
+| Arrows ↑ ↓ | forward, back |
+| `.` `/` | sidestep |
+| Right Shift | run |
+| Right Alt | fire |
+| Space | doors, lifts, switches |
+| `D` | crouch |
+| `L` | look behind |
+| `1`–`5` | pulse rifle, shotgun, plasma, grenades, rockets |
 
-Le joueur a l'inertie de l'original : `PLR1_keyboard_control` tourne dans
-l'interruption verticale, cinquante fois par seconde, où les touches poussent
-une vitesse qui perd un huitième d'elle-même à chaque tic — on accélère, on
-glisse, on tourne avec du jeu. La boucle principale prend ce qui s'est
-accumulé et le fait passer dans les murs ; une image sans tic ne fait que
-redessiner, et les autres donnent leur nombre de tics comme `TempFrames`. Une
-porte s'ouvre quand on tape Espace pendant que le joueur la touche, c'est-à-dire
-en marchant dedans ou dans le court élan qui suit.
+The player has the original's inertia: `PLR1_keyboard_control` runs in the
+vertical blank interrupt, fifty times a second, where the keys push a speed
+that loses an eighth of itself on every tick — you accelerate, you slide, you
+turn with some play. The main loop takes what has built up and moves it
+through the walls; a frame with no tick only redraws, and the others pass
+their tick count as `TempFrames`. A door opens when you press Space while the
+player is touching it, that is, walking into it or in the short momentum that
+follows.
 
-Pour changer de niveau, **PASSWORD** dans le menu. Les disquettes portent les
-**seize** niveaux, et tous se chargent :
+To change level, **PASSWORD** in the menu. The disks hold the **sixteen**
+levels, and all of them load:
 
 | | | | |
 |---|---|---|---|
@@ -111,215 +111,232 @@ Pour changer de niveau, **PASSWORD** dans le menu. Les disquettes portent les
 | 9 Surface Zone `LLLKHFFFFFFFFFFF` | 10 Training Area `LOLKHNFFFFFFFFFF` | 11 Admin Block `PKLKHHFFFFFFFFFF` | 12 The Pit `LPLKHPFFFFFFFFFF` |
 | 13 Strata `OLLKPFFFFFFFFFFF` | 14 Reactor Core `OOLKPNFFFFFFFFFF` | 15 Cooling Tower `LKLKPHFFFFFFFFFF` | 16 Command Centre `OPLKPPFFFFFFFFFF` |
 
-![Le niveau 3](docs/images/level_c.png)
+![Level 3](docs/images/level_c.png)
 
-## Le build visé
+## The target build
 
-Le main est **`source/jg.s`**, pas `master.s`. La distinction a compté : sur
-les 778 routines que les deux fichiers partagent, 183 diffèrent, et une
-quarantaine touchaient au portage — décalages de tuiles, tests de bits contre
-comparaisons, sol de Gouraud présent dans l'un et absent de l'autre. Tout ce qui
-est transcrit vient de l'arbre d'inclusion de `jg.s`.
+The main file is **`source/jg.s`**, not `master.s`. The distinction mattered:
+of the 778 routines the two files share, 183 differ, and some forty affected
+the port — tile offsets, bit tests versus comparisons, a Gouraud floor present
+in one and missing from the other. Everything transcribed comes from the
+include tree of `jg.s`.
 
-## Comment le code est écrit
+## How the code is written
 
-Chaque routine porte le nom de son original et cite les instructions qui
-décident quelque chose. `M68k` fournit les primitives — `divs` qui laisse sa
-destination inchangée en cas de débordement, `muls`, `swap`, l'extension de
-signe — parce que reproduire ces cas-là est souvent la différence entre une
-image juste et une image plausible.
+Each routine bears the name of its original and quotes the instructions that
+decide something. `M68k` provides the primitives — `divs` that leaves its
+destination unchanged on overflow, `muls`, `swap`, sign extension — because
+reproducing those cases is often the difference between a correct image and a
+plausible one.
 
-Les tables ne sont pas recopiées à la main : elles sont **parsées depuis
-l'assembleur**. Les animations d'armes, la table des collisions, les
-enregistrements d'armes, les écrans de menu, les noms des échantillons, les
-touches par défaut — tout vient de `source/`. Deux entrées de la table des sons
-sont commentées ; une recopie à la main aurait décalé d'un cran tout ce qui suit
-la dixième.
+The tables are not copied by hand: they are **parsed from the assembly**.
+Weapon animations, the collision table, weapon records, menu screens, sample
+names, default keys — everything comes from `source/`. Two entries of the sound
+table are commented out; a hand copy would have shifted everything after the
+tenth by one.
 
-Ce que ces parseurs trouvent est ensuite **écrit une fois pour toutes** dans
-`ab3d/gen/Tables.java` par `gradle tool -Ptool=TableGen`. Les parseurs restent ce
-qui décide ; le fichier généré n'est que leur réponse, gardée, pour que l'arbre
-des sources ne soit plus nécessaire à ça. `TableCheck` charge chaque table des
-deux façons et compare, ce qui est la seule chose qui rend l'opération sûre.
+What these parsers find is then **written once and for all** to
+`ab3d/gen/Tables.java` by `gradle tool -Ptool=TableGen`. The parsers remain
+what decides; the generated file is only their answer, kept, so that the source
+tree is no longer needed for that. `TableCheck` loads each table both ways and
+compares them, which is the only thing that makes the operation safe.
 
-Trois choses de plus sont **calculées au lieu d'être lues**, et chacune a son
-contrôle qui la tient à l'octet près contre le fichier d'origine :
+Three more things are **computed instead of read**, and each has its check
+that holds it byte for byte against the original file:
 
-| ce qui n'est plus livré | la règle | le contrôle |
+| what is no longer shipped | the rule | the check |
 | --- | --- | --- |
-| `xtocopx` (192 o) | `(colonne + colonne/32) × 4` — la copper list saute une paire `$106` toutes les 32 couleurs | `BuiltTableCheck` |
-| `iterfile` (2 Ko) | la plus petite puissance de deux ≥ n, et son masque | `BuiltTableCheck` |
-| les quatorze nuances de chaque `.pal` (13 Ko) | `v × (15 − nuance) / 15`, la dernière nuance au noir | `ShadeCheck` |
+| `xtocopx` (192 B) | `(column + column/32) × 4` — the copper list skips a `$106` pair every 32 colours | `BuiltTableCheck` |
+| `iterfile` (2 KB) | the smallest power of two ≥ n, and its mask | `BuiltTableCheck` |
+| the fourteen shades of each `.pal` (13 KB) | `v × (15 − shade) / 15`, the last shade to black | `ShadeCheck` |
 
-La règle d'ombrage n'a pas été devinée : les quatorze palettes de l'arbre
-donnent 6 720 échantillons de « cette composante à cette nuance devient celle-là »
-et **aucun ne contredit un autre**. Seules les trente-deux couleurs du haut de
-chaque palette sont gardées.
+The shading rule was not guessed: the tree's fourteen palettes give 6,720
+samples of "this component at this shade becomes that one" and **none
+contradicts another**. Only the top thirty-two colours of each palette are
+kept.
 
-## Les contrôles de conformité
+## Conformance checks
 
-`src/main/java/ab3d/tools/` contient une cinquantaine de programmes qui vérifient
-le portage contre la source, sans ouvrir de fenêtre :
+`src/main/java/ab3d/tools/` holds some fifty programs that check the port
+against the source, without opening a window:
 
 ```
 gradle tool -Ptool=EnemyCheck
 gradle tool -Ptool=PasswordCheck
 ```
 
-Ils cherchent des accords entre deux endroits écrits séparément. Les douze
-touches par défaut existent deux fois dans l'original — comme octets dans
-`CONTROLBUFFER` et comme libellés imprimés sur l'écran des contrôles — et les
-douze concordent. Les huit listes d'animation d'armes font chacune exactement un
-de plus que le compte annoncé ailleurs dans la table. Vingt-sept des vingt-huit
-échantillons ont la longueur que la table leur donne.
+They look for agreement between two places written separately. The twelve
+default keys exist twice in the original — as bytes in `CONTROLBUFFER` and as
+labels printed on the controls screen — and all twelve match. The eight weapon
+animation lists are each exactly one longer than the count given elsewhere in
+the table. Twenty-seven of the twenty-eight samples have the length the table
+gives them.
 
-Le même travail a servi à savoir quoi **ne pas** porter : il n'y a aucun mur
-transparent dans les seize niveaux ; le visage animé du bandeau a ses données
-commentées et sa routine jamais appelée.
+The same work told what **not** to port: there is no transparent wall in the
+sixteen levels; the status bar's animated face has its data commented out and
+its routine never called.
 
-Il a aussi servi à se tromper, et c'est instructif. Le recensement des ennemis
-ne regardait que les quatre premiers niveaux, et concluait que six types sur
-douze n'étaient posés nulle part. Sur les seize, `EnemyCensus` en trouve
-onze : 49 vers, 34 conduites de gaz, 10 arbres, un robot (niveau 8) et la
-grosse chose rouge, seule, au bout du niveau 16. Seul l'œil n'est jamais posé —
-ce sont les arbres qui le sèment.
+It also served to be wrong, which is instructive. The enemy census only looked
+at the first four levels, and concluded that six types out of twelve were
+placed nowhere. Over all sixteen, `EnemyCensus` finds eleven: 49 worms, 34 gas
+pipes, 10 trees, one robot (level 8) and the big red thing, alone, at the end of
+level 16. Only the eye is never placed — the trees spawn it.
 
-Les contrôles de `tools/` prennent donc désormais par défaut tous les niveaux
-des disquettes (`Levels.all()`). Repassés sur les seize, ils tiennent : aucun
-point ne sort de sa salle, les 40 clés se ramassent et ouvrent chacune une
-porte, chaque condition qu'une porte attend sans qu'un interrupteur la donne est
-un bit de clé — le niveau 16 attend le bit 3, et c'est la grosse chose rouge
-qui le donne en mourant. Trois contrôles se trompaient eux-mêmes et ont été
-corrigés : l'un mettait toujours le joueur au rez-de-chaussée (une clé du
-niveau 8 est à l'étage), un autre ignorait l'armure des nouveaux ennemis, le
-troisième lisait la taille d'un enregistrement de sol avant qu'elle soit
-renseignée. Une seule bizarrerie vient des données : au niveau 12, dix listes
-de découpage nomment le point 0, que la salle ne fait pas tourner — l'original
-lit alors une position restée de l'image précédente, et le portage aussi.
+The checks in `tools/` therefore now take every level on the disks by default
+(`Levels.all()`). Rerun over all sixteen, they hold: no point leaves its room,
+the 40 keys can be picked up and each opens a door, every condition a door
+waits for without a switch giving it is a key bit — level 16 waits for bit 3,
+and the big red thing gives it when it dies. Three checks were themselves
+wrong and have been fixed: one always put the player on the ground floor (a key
+in level 8 is upstairs), another ignored the new enemies' armour, the third
+read the size of a floor record before it was set. Only one quirk comes from
+the data: in level 12, ten clip lists name point 0, which the room does not
+rotate — the original then reads a position left over from the previous frame,
+and so does the port.
 
-### Les ennemis des niveaux 5 à 16
+### The enemies of levels 5 to 16
 
-| type | fichier | ce qu'il fait |
+| type | file | what it does |
 | --- | --- | --- |
-| 13 ver | `halfworm.s` | se tourne vers le joueur sans bouger, quatre tirs de plasma depuis sa gueule (`SHOTOFFMULT` 700), une armure qui divise chaque coup par quatre ; laisse toujours son corps |
-| 16 arbre | `tree.s` | ne tire pas : prend un enregistrement libre de `OtherNastyData` et y fait naître un œil ; les coups de moins de quatre ne comptent pas mais s'additionnent ; disparaît à sa mort |
-| 17 œil | `EyeBall.s` | `FlyingScalyBall.s` dessiné depuis la planche de l'arbre ; éclate en dix morceaux quoi qu'il arrive |
-| 14 grosse chose rouge | `bigredthing.s` | roquettes deux par deux depuis son bras ; tuée, elle **devient une clé** (condition bit 3) dans son propre enregistrement |
-| 20 conduite de gaz | `anims` | ni vue ni blessable : cinq bouffées de flamme à dix images d'écart, puis le repos que `ObjTimer` donne à chaque conduite |
-| 6 robot | `robot.s` | un modèle 3D qui garde un cap et braque vers lui, grenades par deux face au joueur, armure de quatre bits ; explose et devient une clé |
+| 13 worm | `halfworm.s` | turns towards the player without moving, four plasma shots from its mouth (`SHOTOFFMULT` 700), armour that divides every hit by four; always leaves its body |
+| 16 tree | `tree.s` | does not shoot: takes a free record from `OtherNastyData` and spawns an eye in it; hits below four do not count but add up; vanishes when it dies |
+| 17 eye | `EyeBall.s` | `FlyingScalyBall.s` drawn from the tree's sheet; bursts into ten pieces whatever happens |
+| 14 big red thing | `bigredthing.s` | rockets two by two from its arm; once killed, it **becomes a key** (condition bit 3) in its own record |
+| 20 gas pipe | `anims` | neither seen nor hurt: five puffs of flame ten frames apart, then the rest `ObjTimer` gives each pipe |
+| 6 robot | `robot.s` | a 3D model that holds a heading and steers towards it, grenades two at a time facing the player, four-bit armour; explodes and becomes a key |
 
-`OtherNastyData` est une troisième réserve de vingt enregistrements que l'en-tête
-du niveau ne nomme pas : `jg.s` la trouve par `add.l #64*20,a2` après les tirs
-ennemis. `PoolProbe` montre qu'elle est, dans les seize niveaux, à l'intérieur de
-la liste d'objets, juste avant les deux joueurs. `NewEnemyCheck` fait vivre
-chacun de ces types devant le joueur et vérifie ce qu'il laisse en mourant.
+`OtherNastyData` is a third pool of twenty records that the level header does
+not name: `jg.s` finds it with `add.l #64*20,a2` after the enemy shots.
+`PoolProbe` shows that, in all sixteen levels, it lies inside the object list,
+just before the two players. `NewEnemyCheck` brings each of these types to life
+in front of the player and checks what it leaves when it dies.
 
-## Les bizarreries de l'original, gardées et signalées
+## The original's quirks, kept and flagged
 
-Le code note ce qu'il trouve plutôt que de le lisser.
+The code notes what it finds rather than smoothing it over.
 
-- `CALCPASSWORD` teste quatre armes avec quatre `sne d0` de suite, et `sne`
-  écrit l'octet entier : chaque test efface le précédent. Un mot de passe donné
-  par le jeu ne peut jamais restituer plus que la dernière arme, alors que
-  `GETSTATS` en relit quatre.
-- `ComputeBlast` écrit `add.w 32,d3` sans `#` : lu à la lettre, c'est le mot à
-  l'adresse absolue 32, et l'atténuation du souffle disparaîtrait.
-- Le bloc qui calcule la hauteur au franchissement d'une ligne soustrait `a4`,
-  qui est le pointeur de la zone de destination depuis le haut de la boucle.
-- La musique de fond ne démarre jamais : la boucle n'appelle le lecteur que si
-  l'octet 3 de `Prefsfile` vaut `'b'`, et il s'assemble à `'k4nx'`. Les deux
-  jingles de fin de niveau ne sont pas conditionnés, et sont donc la seule
-  musique que ce build joue.
+- `CALCPASSWORD` tests four weapons with four `sne d0` in a row, and `sne`
+  writes the whole byte: each test erases the previous one. A password given
+  by the game can never restore more than the last weapon, although
+  `GETSTATS` reads four back.
+- `ComputeBlast` writes `add.w 32,d3` without `#`: taken literally, that is the
+  word at absolute address 32, and the blast falloff would disappear.
+- The block that computes the height when crossing a line subtracts `a4`,
+  which has been the destination zone pointer since the top of the loop.
+- The background music never starts: the loop only calls the player if byte 3
+  of `Prefsfile` is `'b'`, and it assembles to `'k4nx'`. The two end-of-level
+  jingles are not conditional, and are therefore the only music this build
+  plays.
 
-## Ce que le jeu montrait de travers, et pourquoi
+## What the game showed wrong, and why
 
-Une partie jouée de bout en bout a montré quatre défauts que les contrôles ne
-voyaient pas. `FlickerHunt` fait maintenant marcher le joueur dans un niveau et
-signale les images qui jurent avec leurs voisines.
+A game played from start to finish showed four defects the checks did not
+see. `FlickerHunt` now walks the player through a level and flags the frames
+that clash with their neighbours.
 
-- **Les murs vus de biais en peigne.** `CalcAndDraw` lit la luminosité d'une
-  extrémité par `sub.w #300,d5 / ext.w d5` : l'octet bas seulement. La
-  subdivision fait la moyenne de la colonne de texture et de la luminosité en
-  un seul mot long, si bien qu'une somme de colonnes impaire laisse tomber son
-  bit dans le bit quinze de la luminosité ; le `ext.w` le jette. Le portage
-  avait la soustraction sans le `ext.w`, et le dégradé faisait le tour du
-  nuancier toutes les deux ou trois colonnes.
-- **L'écran qui disparaît une image.** Un point presque à la hauteur de l'œil
-  et loin sur le côté fait déborder `divs` ; le 68000 laisse alors le dividende
-  tel quel, la colonne devient un reste sans rapport, et le mur qui y touche est
-  jeté entier. **L'original le fait aussi** ; le portage pousse désormais la
-  colonne du côté où est le point (`Renderer68k.CLAMP_OVERFLOW`).
-- **Les barils blancs.** `BARREL.pal` s'appelle `barrel.pal-0` dans l'arbre
-  source, et une couleur absente s'écrivait `$fff`.
-- **Les ennemis qui ne meurent pas.** `Collision` n'était pas portée : rien ne
-  tenait un alien à distance, et à moins de quatre-vingts unités la visée
-  l'écarte (l'écart de hauteur sur quarante-quatre dépasse le double de la
-  distance). Il venait mordre là où on ne pouvait pas le toucher. Avec
-  `Collision`, une salle de quatre aliens tombe en douze tirs, tous au but, au
-  lieu de quatre-vingts tirs pour deux touches. Les ennemis prenaient aussi
-  leurs marches avec la hauteur du joueur au lieu de la leur.
+- **Walls seen at an angle, combed.** `CalcAndDraw` reads an end's brightness
+  with `sub.w #300,d5 / ext.w d5`: the low byte only. Subdivision averages the
+  texture column and the brightness in a single long word, so an odd column sum
+  drops its bit into bit fifteen of the brightness; the `ext.w` throws it away.
+  The port had the subtraction without the `ext.w`, and the gradient went round
+  the shade table every two or three columns.
+- **The screen vanishing for a frame.** A point almost at eye height and far to
+  the side makes `divs` overflow; the 68000 then leaves the dividend as is, the
+  column becomes an unrelated remainder, and the wall touching it is discarded
+  whole. **The original does it too**; the port now pushes the column towards
+  the side the point is on (`Renderer68k.CLAMP_OVERFLOW`).
+- **White barrels.** `BARREL.pal` is called `barrel.pal-0` in the source tree,
+  and a missing colour was written as `$fff`.
+- **Enemies that would not die.** `Collision` had not been ported: nothing kept
+  an alien at a distance, and under eighty units the aim misses it (the height
+  difference over forty-four exceeds twice the distance). It came to bite where
+  it could not be hit. With `Collision`, a room of four aliens falls in twelve
+  shots, all on target, instead of eighty shots for two hits. Enemies also took
+  their steps with the player's height instead of their own.
 
-- **Des murs aux mauvaises textures, un peu partout.** La table des textures
-  de murs n'était connue que pour ses six premières entrées, celles que
-  `master.s` déclare ; les suivantes avaient été devinées d'après les fichiers
-  assez grands pour les bandes que les niveaux demandent. Or `jg.s` inclut
-  `wallchunk.s`, qui donne la liste entière : quatre devinettes étaient fausses
-  (6, 8, 9 et 13), et une texture de la mauvaise taille sort en bouillie.
-- **Le mouvement saccadé.** Le jeu avance cinquante fois par seconde, l'écran
-  en affiche soixante : une image sur six ne bougeait pas. L'affichage place
-  maintenant l'œil entre les deux derniers tics ; tout ce qui décide de quelque
-  chose garde les positions des tics.
-- **Le rectangle rayé multicolore (indicateurs de clé), l'eau, le menu.**
-  L'exécutable de la disquette un, `abd.pk`, comparé octet par octet aux
-  sources une fois décompressé, contient les mêmes modèles et presque les mêmes
-  tables, sauf trois : `Texturemaps` (les textures des objets 3D ; celle des
-  sources est une version antérieure, bruitée, et le boîtier des indicateurs y
-  est une bouillie rayée), `brightentab` (le jeu a celle que les sources
-  appellent `oldbrightenfile`, des couleurs douze bits ; `brightenfile` est une
-  table d'octets d'une autre version, et lue en mots elle teintait l'eau
-  n'importe comment) et `optcop` (le texte du menu est doré dans le jeu, gris
-  dans les sources). `data/ShippedExe` transcrit le décompresseur de
-  l'exécutable et y lit ces trois tables ; `tools/ShippedExeCheck` vérifie que
-  leurs voisines sont bien identiques aux fichiers des sources, ce qui garantit
-  les adresses. Sans la disquette, le portage retombe sur les sources et le dit.
-- **Les objets 3D qui flottent, le fusil à pompe trop haut.** Le centre
-  horizontal d'un modèle se lit dans `ObjRotated` au long de l'octet quatre (x
-  déjà multiplié par 128) ; le portage prenait le mot de l'octet zéro (x brut),
-  si bien que chaque modèle se dessinait presque au milieu de la vue au lieu
-  d'être sur son mur. Et `GUNYOFFS` avait été recopié avec un zéro pour le
-  fusil à pompe au lieu de vingt : il est désormais lu dans `jg.s`.
+- **Walls with the wrong textures, here and there.** The wall texture table
+  was only known for its first six entries, the ones `master.s` declares; the
+  next ones had been guessed from the files large enough for the strips the
+  levels ask for. But `jg.s` includes `wallchunk.s`, which gives the whole
+  list: four guesses were wrong (6, 8, 9 and 13), and a texture of the wrong
+  size comes out as mush.
+- **Jerky movement.** The game advances fifty times a second, the screen shows
+  sixty: one frame in six did not move. The display now places the eye between
+  the last two ticks; everything that decides something keeps the tick
+  positions.
+- **The multicoloured striped rectangle (key indicators), the water, the
+  menu.** The executable on disk one, `abd.pk`, compared byte for byte with the
+  sources once decompressed, contains the same models and almost the same
+  tables, except three: `Texturemaps` (the 3D objects' textures; the sources'
+  one is an earlier, noisy version, and the indicators' housing is striped mush
+  in it), `brightentab` (the game has the one the sources call
+  `oldbrightenfile`, twelve-bit colours; `brightenfile` is a byte table from
+  another version, and read as words it tinted the water any old way) and
+  `optcop` (the menu text is gold in the game, grey in the sources).
+  `data/ShippedExe` transcribes the executable's decompressor and reads these
+  three tables from it; `tools/ShippedExeCheck` checks that their neighbours
+  are identical to the source files, which guarantees the addresses. Without
+  the disk, the port falls back on the sources and says so.
+- **3D objects floating, the shotgun too high.** A model's horizontal centre is
+  read in `ObjRotated` as the long at byte four (x already multiplied by 128);
+  the port took the word at byte zero (raw x), so every model was drawn almost
+  in the middle of the view instead of on its wall. And `GUNYOFFS` had been
+  copied with a zero for the shotgun instead of twenty: it is now read from
+  `jg.s`.
 
-Et deux tremblements venaient du glissement contre les murs : pressé dans un
-coin, le joueur était renvoyé en arrière une image sur deux. Un déplacement qui
-finit derrière son point de départ est désormais refusé
-(`Player.REFUSE_BACKSLIDE`), comme l'est déjà celui qui sort de toute salle.
+And two jitters came from sliding along walls: pressed into a corner, the
+player was pushed back every other frame. A move that ends behind its starting
+point is now refused (`Player.REFUSE_BACKSLIDE`), as one that leaves every
+room already is.
 
-## Ce qui manque
+## What is missing
 
-Le mode deux joueurs, et le grand alien laid (`BigUglyAlien.s`), inclus mais
-qu'aucun type ne fait appeler.
+Two-player mode, and the big ugly alien (`BigUglyAlien.s`), included but called
+by no type.
 
-Trois écarts assumés subsistent dans le moteur, tous commentés à l'endroit
-où ils sont : un refus de déplacement qui n'existe pas dans l'original, parce que
-le glissement transcrit laisse un résidu que le sien n'a pas ; le ver, l'arbre et la grosse chose rouge qui, en attaquant, gardent la salle où
-ils sont — l'original appelle `MoveObject`, remet l'ancienne position, mais
-garde la salle d'arrivée ; et `FindCloseRoom` (`CloseRoom`), qui choisit dans
-quelle salle dessiner un grand sprite à cheval sur deux, et qui lance sa seconde
-sonde depuis la salle de la créature et non depuis celle où la première s'est
-arrêtée, et l'arrêt au premier mur garde le point glissé plutôt que de
-calculer le point d'impact.
+Three deliberate deviations remain in the engine, all commented where they
+are: a refused move that does not exist in the original, because the
+transcribed sliding leaves a residue the original's does not; the worm, the
+tree and the big red thing which, when attacking, keep the room they are in —
+the original calls `MoveObject`, restores the old position, but keeps the
+arrival room; and `FindCloseRoom` (`CloseRoom`), which chooses in which room to
+draw a large sprite straddling two, and which launches its second probe from
+the creature's room and not from the one where the first stopped, and the stop
+at the first wall keeps the slid point rather than computing the point of
+impact.
 
-## Licence
+## Legal Notice & Game Assets
 
-Le code de ce dépôt est publié tel quel.
+### Independent Engine Implementation
 
-`src/main/resources/ab3d/includes/` contient 307 Ko de données d'origine de
-**Team17**, tirées des sources publiées : les tables que l'exécutable Amiga avait
-compilées dedans. Le portage ne s'en sert plus qu'en secours : il lit ces tables
-dans l'exécutable de la disquette un (`abd.pk`, voir `data/ShippedExe`), car
-trois d'entre elles n'existent dans les sources que dans une autre version. Ils restent la propriété de leurs
-ayants droit, comme tout le reste du contenu du jeu.
+This project is an independent reimplementation of the *Alien Breed 3D* engine, designed to reproduce the original game's behavior on modern platforms.
 
-Les niveaux, les sons, les sprites et les textures ne sont **pas** dans ce
-dépôt : il faut posséder une copie d'Alien Breed 3D pour faire tourner ce
-portage.
+The engine has been developed from the original source code (68000 assembly), released together with that of *Alien Breed 3D II* and available in [mheyer32/ab3d-rtg](https://github.com/mheyer32/ab3d-rtg), through technical analysis and compatibility testing. That source code is not included in this repository.
+
+### Original Game Files
+
+This project requires original game files, the two Amiga ADF disk images, to run.
+
+**Original game files are not included in this project.** Levels, sounds, sprites and textures are not here: you need to own a copy of Alien Breed 3D to run this port.
+
+Users must obtain and provide their own game files from a legally authorized source. Before downloading or using this engine, users are required to confirm that they possess a legally obtained copy of the original game.
+
+The only exception: `src/main/resources/ab3d/includes/` contains 307 KB of original **Team17** data, taken from the published sources: the tables the Amiga executable had compiled in (`INCBIN`), which are on no disk. The port now only uses them as a fallback: it reads these tables from the executable on disk one (`abd.pk`, see `data/ShippedExe`), because three of them exist in the sources only in another version.
+
+Eloane Studio does not host, distribute, or provide unauthorized copies of copyrighted game assets.
+
+### Copyright & Trademarks
+
+All original game names, trademarks, graphics, music, and other proprietary assets of *Alien Breed 3D* remain the property of their respective copyright holders (Team17), including the original tables included in this repository.
+
+This project is an independent, unofficial implementation and is not affiliated with, endorsed by, or sponsored by the original game's developers or publishers.
+
+### Preservation
+
+The purpose of this project is to preserve the technical behavior and gameplay experience of classic video games while making them accessible on modern systems.
+
+The engine is provided for compatibility, preservation, and educational purposes.
+
+### Licence and credits
+
+The code in this repository is published as is. **Non-commercial** project, for study and preservation purposes. Original engine: Team17 (Andy Clitheroe et al.). Reference sources: [mheyer32/ab3d-rtg](https://github.com/mheyer32/ab3d-rtg). Java port: **Guillaume Monet**.
